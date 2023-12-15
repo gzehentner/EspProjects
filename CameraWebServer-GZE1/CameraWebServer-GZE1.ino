@@ -23,8 +23,10 @@
 const char* ssid = "Zehentner";
 const char* password = "ElisabethScho";
 
-void startCameraServer();
-
+/*
+  
+ void startCameraServer();
+*/
 // internal flash LED is on port 4
 #define flash 4
 
@@ -38,7 +40,7 @@ void setup() {
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(flash, OUTPUT);
 
-/*  
+  
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -78,13 +80,14 @@ void setup() {
   pinMode(14, INPUT_PULLUP);
 #endif
 
+/*
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
     Serial.printf("Camera init failed with error 0x%x", err);
     return;
   }
-
+*/
   sensor_t * s = esp_camera_sensor_get();
   // initial sensors are flipped vertically and colors are a bit saturated
   if (s->id.PID == OV3660_PID) {
@@ -109,7 +112,7 @@ void setup() {
   Serial.println("");
   Serial.println("WiFi connected");
 
-  startCameraServer();
+/*  startCameraServer();
 
   Serial.print("Camera Ready! Use 'http://");
   Serial.print(WiFi.localIP());
