@@ -9,7 +9,7 @@
 //
 
 // Select camera model
-#define CAMERA_MODEL_WROVER_KIT // Has PSRAM
+//#define CAMERA_MODEL_WROVER_KIT // Has PSRAM
 //#define CAMERA_MODEL_ESP_EYE // Has PSRAM
 //#define CAMERA_MODEL_M5STACK_PSRAM // Has PSRAM
 //#define CAMERA_MODEL_M5STACK_V2_PSRAM // M5Camera version B Has PSRAM
@@ -19,14 +19,13 @@
 //#define CAMERA_MODEL_TTGO_T_JOURNAL // No PSRAM
 
 #include "camera_pins.h"
+#include <ArduinoOTA.h> // OTA Upload via ArduinoIDE
 
 const char* ssid = "Zehentner";
 const char* password = "ElisabethScho";
 
-/*
-  
  void startCameraServer();
-*/
+
 // internal flash LED is on port 4
 #define flash 4
 
@@ -80,14 +79,14 @@ void setup() {
   pinMode(14, INPUT_PULLUP);
 #endif
 
-/*
+
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
     Serial.printf("Camera init failed with error 0x%x", err);
     return;
   }
-*/
+
   sensor_t * s = esp_camera_sensor_get();
   // initial sensors are flipped vertically and colors are a bit saturated
   if (s->id.PID == OV3660_PID) {
@@ -112,19 +111,23 @@ void setup() {
   Serial.println("");
   Serial.println("WiFi connected");
 
-/*  startCameraServer();
+  startCameraServer();
 
   Serial.print("Camera Ready! Use 'http://");
   Serial.print(WiFi.localIP());
   Serial.println("' to connect");
-  */
+
+  ArduinoOTA.begin(); // OTA Upload via ArduinoIDE
+  ArduinoOTA.setPassword("11er");
+
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  delay(1000);
+  delay(10000);
 
-  digitalWrite(flash, HIGH);  // turn the LED on (HIGH is the voltage level)
+/*  digitalWrite(flash, HIGH);  // turn the LED on (HIGH is the voltage level)
   delay(1000);                      // wait for a second
   digitalWrite(flash, LOW);   // turn the LED off by making the voltage LOW
   delay(1000);                      // wait for a second
@@ -132,5 +135,6 @@ void loop() {
   // put your main code here, to run repeatedly:
   Serial.println("Hello from the D1 Mini module!");
   delay(1000);
-
+*/
+  ArduinoOTA.handle(); // OTA Upload via ArduinoIDE
 }
