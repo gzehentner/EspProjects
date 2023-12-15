@@ -1,6 +1,8 @@
 /*
   Blink
 
+  Blink Example coming from Arduino IDE 1.xx
+
   Turns an LED on for one second, then off for one second, repeatedly.
 
   Most Arduinos have an on-board LED you can control. On the UNO, MEGA and ZERO
@@ -21,7 +23,7 @@
 
   https://www.arduino.cc/en/Tutorial/BuiltInExamples/Blink
 */
-#define flash 2
+#define flash 4
 // the setup function runs once when you press reset or power the board
 void setup() {
   // initialize digital pin LED_BUILTIN as an output.
