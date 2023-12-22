@@ -2,10 +2,41 @@
 Georgs server.ino
 */
 void handleRoot() {
+  /*
   digitalWrite(led, 1);
-  server.send(200, "text/plain", "hello from esp8266!\r\n");
+  server.send(200, "text/plain", "hello from esp8266! GZE\r\n");
   digitalWrite(led, 0);
+  */
+  // create root page with links to subpages
+  String message;
+  addTop(message);
+  message += F("<!DOCTYPE html>\n"
+              "<html lang='en'>\n"
+              "<head>\n"
+              "<title>" TXT_BOARDNAME " - Board " TXT_BOARDID"</title>\n"
+              "</head>\n"
+              "<body>\n"
+              "<article>\n"
+              "<h1>Your webserver on " TXT_BOARDNAME " - Board " TXT_BOARDID " is running!</h1>\n"
+              "</article>\n"
+              "<p></p>\n"
+              "<article>\n"
+              "<h2>Here is a list of subpages</h2>\n"
+              "<p>-  <a href='0.htm'>Page 0 -- handlePage</a></p>\n"
+              "<p>-  <a href='1.htm'>Page 1 -- handlePage1</a></p>\n"
+              "<p>-  <a href='2.htm'>Page 2 -- handlePage2</a></p>\n"
+              "<p>-  <a href='x.htm'>Page x -- handleAnotherPage</a></p>\n"
+              "<p>-  <a href='f.css'>Page f.css</a></p>\n"
+              "<p>-  <a href='j.js'> Page j.js</a></p>\n"
+              "<p>-  <a href='json'> Page json</a></p>\n"
+              "</article>\n"
+              "</body>\n"
+              "</html>");
+  server.send(200, "text/html", message);
+
 }
+
+
 
 void handleNotFound() {
   digitalWrite(led, 1);
@@ -41,11 +72,12 @@ void handleOtherPage()
               "<p>But as most of my webserver should have the same look and feel"
               " I'm using one layout for all html pages.</p>\n"
               "<p>Therefore all my html pages come from the function handlePage()</p>\n"
-              "<p>To go back to the formated pages <a href='0.htm'>use this link</a></p>\n"
+              "<p>To go back to the formated pages <a href='/'>use this link</a></p>\n"
               "</body>\n"
               "</html>");
   server.send(200, "text/html", message);
 }
+// Add header to website
 void addTop(String& message) {
   message = F("<!DOCTYPE html>\n"
               "<html lang='en'>\n"
@@ -55,7 +87,7 @@ void addTop(String& message) {
               "<script src='j.js'></script>\n"
               "</head>\n");
 }
-
+// Add footer to website
 void addBottom(String& message) {
   message += F("<footer>"
                "<p>Author: Georg Zehentner</p>"
