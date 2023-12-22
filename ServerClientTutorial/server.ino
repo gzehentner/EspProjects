@@ -29,9 +29,12 @@ void handleRoot() {
               "<p>-  <a href='f.css'>Page f.css</a></p>\n"
               "<p>-  <a href='j.js'> Page j.js</a></p>\n"
               "<p>-  <a href='json'> Page json</a></p>\n"
+              "<p>-  <a href='c.php?toggle=3' > Toggle LED</a></p>\n"
+              "<p>-  <a href='c.php?CMD=RESET'> Reset ESP       </a></p>\n"
               "</article>\n"
               "</body>\n"
               "</html>");
+  addBottom(message);
   server.send(200, "text/html", message);
 
 }
@@ -44,7 +47,8 @@ void handleNotFound() {
   Serial.println(F("D015 handleNotFound()"));
   
 
-  String message = F("404 - File Not Found\n\n");
+  String message;
+  message += F("404 - File Not Found\n\n");
   message += F("URI: ");
   message += server.uri();
   message += F("\nMethod: ");
@@ -55,14 +59,17 @@ void handleNotFound() {
   for (uint8_t i = 0; i < server.args(); i++) { message += " " + server.argName(i) + ": " + server.arg(i) + "\n"; }
   server.send(404, "text/plain", message);
   digitalWrite(led, 0);
+
 }
 
 void handleOtherPage()
 // a very simple example how to output a HTML page from program memory
 {
   String message;
-  message = F("<!DOCTYPE html>\n"
+  addTop(message);
+  message += F("<!DOCTYPE html>\n"
               "<html lang='en'>\n"
+              "<article_wide>\n"
               "<head>\n"
               "<title>" TXT_BOARDNAME " - Board " TXT_BOARDID "</title>\n"
               "</head>\n"
@@ -74,7 +81,9 @@ void handleOtherPage()
               "<p>Therefore all my html pages come from the function handlePage()</p>\n"
               "<p>To go back to the formated pages <a href='/'>use this link</a></p>\n"
               "</body>\n"
+              "</article_wide>\n"
               "</html>");
+  addBottom(message);
   server.send(200, "text/html", message);
 }
 // Add header to website
@@ -90,12 +99,15 @@ void addTop(String& message) {
 // Add footer to website
 void addBottom(String& message) {
   message += F("<footer>"
+              "<article_wide>\n"
                "<p>Author: Georg Zehentner</p>"
               "<p><a href=\"mailto:gzehentner@web.de\">gzehentner@web.de</a></p>"
+              "<p><a href=/> Goto Root</a></p>"
+              "</article_wide>\n"
               "</footer>)");
 
 }
-/*
+
 void handlePage()
 {
 String message;
@@ -138,53 +150,8 @@ message += F("<article>\n"
 addBottom(message);
 server.send(200, "text/html", message);
 }
-*/
 
-/*==================================================*/
-// the html output
-// finally check your output if it is valid html: https://validator.w3.org
-// *** HOME ***  0.htm
-void handlePage()
-{
-  String message;
-  addTop(message);
 
-  message += F("<article>\n"
-               "<h2>Homepage from original</h2>\n"                                                   // here you write your html code for your homepage. Let's give some examples...
-               "<p>This is an example for a webserver on your ESP8266. "
-               "Values are getting updated with Fetch API/JavaScript and JSON.</p>\n"
-               "</article>\n");
-
-  message += F("<article>\n"
-               "<h2>Values (with update)</h2>\n");
-  message += F("<p>Internal Voltage measured by ESP: <span id='internalVcc'>");        // example how to show values on the webserver
-  message += ESP.getVcc();
-  message += F("</span>mV</p>\n");
-
-  message += F("<p>Button 1: <span id='button1'>");                                    // example how to show values on the webserver
-  message += digitalRead(BUTTON1_PIN);
-  message += F("</span></p>\n");
-
-  message += F("<p>Output 1: <span id='output1'>");                                    // example 3
-  message += digitalRead(OUTPUT1_PIN);
-  message += F("</span></p>\n");
-
-  message += F("<p>Output 2: <span id='output2'>");                                    // example 4
-  message += digitalRead(OUTPUT2_PIN);
-  message += F("</span></p>\n"
-               "</article>\n");
-
-  message += F("<article>\n"
-               "<h2>Switch</h2>\n"                                                     // example how to switch/toggle an output
-               "<p>Example how to switch/toggle outputs, or to initiate actions. The buttons are 'fake' buttons and only styled by CSS. Click to toggle the output.</p>\n"
-               "<p class='off'><a href='c.php?toggle=1' target='i'>Output 1</a></p>\n"
-               "<p class='off'><a href='c.php?toggle=2' target='i'>Output 2</a></p>\n"
-               "<iframe name='i' style='display:none' ></iframe>\n"                    // hack to keep the button press in the window
-               "</article>\n");
-
-  addBottom(message);
-  server.send(200, "text/html", message);
-}
 /*=============================================================*/
 void handleCss()
 {
@@ -200,6 +167,7 @@ void handleCss()
               "a{text-decoration:none;color:dimgray;text-align:center}\n"
               "main{text-align:center}\n"
               "article{vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:#E5E5E5;width:20em;text-align:left}\n" // if you don't like the floating effect (vor portrait mode on smartphones!) - remove display:inline-block
+              "article_wide{vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:#E5E5E5;width:40em;text-align:left}\n" // if you don't like the floating effect (vor portrait mode on smartphones!) - remove display:inline-block
               "article h2{margin-top:0;padding-bottom:1px}\n"
               "section {margin-bottom:0.2em;clear:both;}\n"
               "table{border-collapse:separate;border-spacing:0 0.2em}\n"
@@ -299,6 +267,18 @@ void handleCommand()
       else
       {
         digitalWrite(OUTPUT2_PIN, HIGH);
+      }
+    }
+    if (server.arg(0) == "3") // the value for that parameter(led))
+    {
+      Serial.println(F("D232 toggle LED"));
+      if (digitalRead(led))
+      { // toggle: if the pin was on - switch it of and vice versa
+        digitalWrite(led, LOW);
+      }
+      else
+      {
+        digitalWrite(led, HIGH);
       }
     }
   }
