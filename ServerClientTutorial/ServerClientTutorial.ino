@@ -29,6 +29,9 @@ uint32_t clientPreviousSs = 0 - clientIntervall; // last second when data was se
 
 #define TXT_BOARDNAME "ESP8266"
 #define TXT_BOARDID "DevBoard"
+#define VERSION "1.1"
+const char* sendHttpTo = "http://172.168.178.999/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+
 
 #define BUTTON1_PIN 3 // RX
 #define OUTPUT1_PIN 5 // D1
@@ -88,8 +91,8 @@ void setup(void)
     gif_colored[18] = millis() % 256;
     server.send(200, "image/gif", gif_colored, sizeof(gif_colored)); });
   server.on("/0.htm", handlePage);
-  // server.on("/1.htm", handlePage1);
-  // server.on("/2.htm", handlePage2);
+  server.on("/1.htm", handlePage1);
+  server.on("/2.htm", handlePage2);
   server.on("/x.htm", handleOtherPage); // just another page to explain my usage of HTML pages ...
   server.on("/f.css", handleCss);       // a stylesheet
 

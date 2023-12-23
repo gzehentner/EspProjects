@@ -97,15 +97,44 @@ void addTop(String& message) {
               "</head>\n");
 }
 // Add footer to website
-void addBottom(String& message) {
-  message += F("<footer>"
-              "<article_wide>\n"
-               "<p>Author: Georg Zehentner</p>"
-              "<p><a href=\"mailto:gzehentner@web.de\">gzehentner@web.de</a></p>"
-              "<p><a href=/> Goto Root</a></p>"
-              "</article_wide>\n"
-              "</footer>)");
 
+void addBottom(String &message) {
+  message += F("</main>\n"
+               "<footer>\n<p>"                 // The footer will display the uptime, the IP the version of the sketch and the compile date/time
+               "<article_wide>\n");
+  if (ss > 604800)
+  {
+    message += F("<span id='week'>");
+    message +=  ((ss / 604800) % 52);
+    message += F("</span> weeks ");
+  }
+  if (ss > 86400)
+  {
+    message += F("<span id='day'>");
+    message += ((ss / 86400) % 7);
+    message += F("</span> days ");
+  }
+  if (ss > 3600)
+  {
+    message += F("<span id='hour'>");
+    message += ((ss / 3600) % 24);
+    message += F("</span> hours ");
+  }
+
+  message += F("<span id='min'>");
+  message += ((ss / 60) % 60);
+  message += F("</span> minutes ");
+
+  message += F("<span id='sec'>");
+  message += (ss % 60);
+  message += F("</span> seconds since startup | Version " VERSION " \n");
+  message += F( "IP: ");
+  message += WiFi.localIP().toString();
+  message += F(" | " __DATE__ " " __TIME__ " \n");
+  message += F("<nav><text-align:center><a href=/> Klick her to goto Root</a></nav>");
+  message += F("</p>\n</footer>\n</body>\n</html></article_wide>\n");
+
+  server.send(200, "text/html", message);
 }
 
 void handlePage()
@@ -151,6 +180,68 @@ addBottom(message);
 server.send(200, "text/html", message);
 }
 
+// *** Page 1 ***  1.htm
+void handlePage1()
+{
+  String message;
+  addTop(message);
+
+  message += F("<article>\n"
+               "<h2>Page 1</h2>\n"
+               "<p>This is example content for [Page 1]<p>\n"
+               "</article>\n"
+
+               "<article>\n"
+               "<h2>\"Mobile First\"</h2>\n"
+               "<p>\"Mobile First\" means that the pages are optimized for smartphones. "
+               "The content width is narrow. Each time you start a new article session, a box will be generated. "
+               "This box will float: on smartphones in portrait mode they will be aligned vertically, "
+               "on monitors in landscape mode, the article boxes will be aligned horizontally. "
+               "If you don't like this effect, you have to adopt the stylesheet (f.css)."
+               "</p>\n"
+               "</article>\n"
+
+               "<article>\n"
+               "<h2>Lorem ipsum</h2>\n"
+               "<p>Lorem ipsum dolor sit amet, consectetur adipisici elit, "
+               "sed eiusmod tempor incidunt ut labore et dolore magna aliqua. "
+               "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris "
+               " nisi ut aliquid ex ea commodi consequat. "
+               "Quis aute iure reprehenderit in voluptate velit esse cillum dolore "
+               "eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat "
+               "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. "
+               "</p>\n"
+               "</article>\n"
+              );
+  addBottom(message);
+  server.send(200, "text/html", message);
+}
+
+
+// *** Page 2 ***  2.htm
+void handlePage2()
+{
+  String message;
+  addTop(message);
+
+  message += F("<article>\n"
+               "<h2>The webclient</h2>\n"
+               "<p>Some words about the weblient ('client'): The client will send data to a server.<p>\n"
+               "<p>To be precise, the client on this module will send each ");
+  message += clientIntervall;
+  message += F(" seconds to a resource at<br>");
+  message += sendHttpTo;
+  message += F("<br>which you can set up in the configuration part. It consists of the webserver adress and a page. You must ensure, that the webserver and the called page is available, otherwise the request will fail.<p>\n"
+               "<p>Optionally you can send a command to force the webclient to send manually</p>\n"
+               "<p><a href='c.php?CMD=CLIENT' target='i' class='on'>Send now</a></p>\n"
+               "<iframe name='i' style='display:none' ></iframe>\n"
+               "<p>If the other webserver shares the same source code like this module - it should be able to collect the data from this module.</p>\n"
+               "</article>\n"
+              );
+  addBottom(message);
+  server.send(200, "text/html", message);
+}
+
 
 /*=============================================================*/
 void handleCss()
@@ -168,12 +259,13 @@ void handleCss()
               "main{text-align:center}\n"
               "article{vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:#E5E5E5;width:20em;text-align:left}\n" // if you don't like the floating effect (vor portrait mode on smartphones!) - remove display:inline-block
               "article_wide{vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:#E5E5E5;width:40em;text-align:left}\n" // if you don't like the floating effect (vor portrait mode on smartphones!) - remove display:inline-block
+              "article_center{vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:#E5E5E5;width:20em;text-align:center}\n" // if you don't like the floating effect (vor portrait mode on smartphones!) - remove display:inline-block
               "article h2{margin-top:0;padding-bottom:1px}\n"
               "section {margin-bottom:0.2em;clear:both;}\n"
               "table{border-collapse:separate;border-spacing:0 0.2em}\n"
               "th, td{background-color:#C0C0C0}\n"
               "button{margin-top:0.3em}\n"
-              "footer p{font-size:0.7em;color:dimgray;background:silver;text-align:center;margin-bottom:5px}\n"
+              "footer p{font-size:1.0em;color:dimgray;background:silver;text-align:center;margin-bottom:5px}\n"
               "nav{background-color:silver;margin:1px;padding:5px;font-size:0.8em}\n"
               "nav a{color:dimgrey;padding:10px;text-decoration:none}\n"
               "nav a:hover{text-decoration:underline}\n"
@@ -229,6 +321,8 @@ void handleJson()
   message += digitalRead(BUTTON1_PIN);
   message += (F(",\"output1\":"));
   message += digitalRead(OUTPUT1_PIN);
+  message += (F(",\"output2\":"));
+  message += digitalRead(OUTPUT2_PIN);
   message += (F("}")); // End of JSON
   server.send(200, "application/json", message);
 }
