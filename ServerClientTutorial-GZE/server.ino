@@ -26,6 +26,7 @@ void handleRoot() {
               "<p>-  <a href='1.htm'>Page 1 -- handlePage1</a></p>\n"
               "<p>-  <a href='2.htm'>Page 2 -- handlePage2</a></p>\n"
               "<p>-  <a href='x.htm'>Page x -- handleAnotherPage</a></p>\n"
+              "<p>-  <a href='r.htm'>Page r -- Remote data page</a></p>\n"
               "<p>-  <a href='f.css'>Page f.css</a></p>\n"
               "<p>-  <a href='j.js'> Page j.js</a></p>\n"
               "<p>-  <a href='json'> Page json</a></p>\n"
@@ -86,6 +87,29 @@ void handleOtherPage()
   addBottom(message);
   server.send(200, "text/html", message);
 }
+void handleRemote()
+// display data coming from remote client; data is received from handleData
+{
+  String message;
+  addTop(message);
+  message += F("<!DOCTYPE html>\n"
+              "<html lang='en'>\n"
+              "<article_wide>\n"
+              "<body>\n"
+              "<h1>List of remote data\n");
+  message += F("<p>board    : "); message += remoteBoardId; message += F("</p>\n");
+  message += F("<p>vcc      : "); message += remoteVcc    ; message += F("</p>\n");
+  message += F("<p>output1  : "); message += remoteOutput1; message += F("</p>\n");
+  message += F("<p>button1  : "); message += remoteButton1; message += F("</p>\n");
+  message += F("</body>\n"
+              "</article_wide>\n"
+              "</h1>"
+              "</html>");
+  addBottom(message);
+  server.send(200, "text/html", message);
+}
+
+
 // Add header to website
 void addTop(String& message) {
   message = F("<!DOCTYPE html>\n"
@@ -382,4 +406,45 @@ void handleCommand()
     ESP.restart();
   }
   server.send(204, "text/plain", "No Content"); // this page doesn't send back content --> 204
+}
+
+void handleData() {
+// receives data from a remote board 
+// and saves data to local variables
+// it uses similar method like the command processing: 
+// we receive parameters and store them in variables
+  Serial.println(F("D323 handleData()"));
+  uint8_t counter = 0; // will count valid values
+  for (uint8_t i = 0; i < server.args(); i++) {
+    Serial.print(server.argName(i));
+    Serial.print(F(": "));
+    Serial.println(server.arg(i));
+    if (server.argName(i) == "board")
+    {
+      remoteBoardId = server.arg(0).toInt();
+      counter++;
+    }
+    else if (server.argName(i) == "vcc")
+    {
+      remoteVcc = server.arg(i).toInt();
+      counter++;
+    }
+    else if (server.argName(i) == "output1")
+    {
+      remoteOutput1 = server.arg(i).toInt();
+      counter++;
+    }
+    else if (server.argName(i) == "button1")
+    {
+      remoteButton1 = server.arg(i).toInt();
+      counter++;
+    }
+  }
+  //example for errorhandling
+  if (counter >= 1)
+  {
+    remoteLastMessage = millis() / 1000; // store the timestamp 
+    remoteMessagesSucessfull++; // increase successfull submits
+  }
+  server.send(200, "text/plain", "OK");
 }

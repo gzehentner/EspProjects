@@ -32,7 +32,7 @@
 
 #define VERSION "3.0"                                    // the version of this sketch
                                                            
-#define USE_BOARD 156                                      // the actual board to compile
+#define USE_BOARD 153                                      // the actual board to compile
 
 /* *******************************************************************
          the board settings / die Einstellungen der verschiedenen Boards
@@ -43,15 +43,15 @@
 #define TXT_BOARDNAME "ESP8266 Server Client"              // the name of the board
 #define CSS_MAINCOLOR "blue"                               // don't get confused by the different webservers and use different colors
 const uint16_t clientIntervall = 0;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
-const char* sendHttpTo = "http://http://192.168.178.156/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+const char* sendHttpTo = "http://192.168.178.153/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
 #endif
 
-#if USE_BOARD == 156                                       // example Board
-#define TXT_BOARDID "156"                                  // an ID for the board
+#if USE_BOARD == 153                                       // example Board
+#define TXT_BOARDID "153"                                  // an ID for the board
 #define TXT_BOARDNAME "ESP8266 Server Client"              // the name of the board 
 #define CSS_MAINCOLOR "green"                              // don't get confused by the different webservers and use different colors
 const uint16_t clientIntervall = 30;                       // intervall to send data to a server in seconds. Set to 30 if you want to send data each 30 seconds
-const char* sendHttpTo = "http://http://192.168.178.155/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+const char* sendHttpTo = "http://192.168.178.155/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
 #endif
 
 /* *******************************************************************

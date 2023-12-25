@@ -21,17 +21,27 @@ const int led = 2;
          Globals - Variables and constants
  ********************************************************************/
 
-const uint16_t clientIntervall = 0;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
+const uint16_t clientIntervall = 10;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
 
 unsigned long ss = 0;                            // current second since startup
 const uint16_t ajaxIntervall = 5;                // intervall for AJAX or fetch API call of website in seconds
 uint32_t clientPreviousSs = 0 - clientIntervall; // last second when data was sent to server
 
+//values from the remote device will be stored in this variables:
+uint8_t remoteBoardId = 0;                       // will save the remote board ID
+uint8_t remoteButton1 = 0;                       // the input GPIO from the remote ESP
+uint8_t remoteOutput1 = 0;                       // the output GPIO from the remote ESP
+uint8_t remoteOutput2 = 0;                       // the output GPIO from the remote ESP
+uint32_t remoteVcc = 0;                          // the voltage mesarued by remote ESP
+uint32_t remoteMessagesSucessfull = 0;           // counter, how many messages where received
+uint32_t remoteLastMessage = 0;                  // last message from remote ESP
+
+
 
 #define TXT_BOARDNAME "ESP8266"
 #define TXT_BOARDID "DevBoard"
 #define VERSION "2.0"
-const char* sendHttpTo = "http://172.168.178.999/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+const char* sendHttpTo = "http://192.168.178.153/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
 
 
 #define BUTTON1_PIN 3 // RX
@@ -95,6 +105,7 @@ void setup(void)
   server.on("/1.htm", handlePage1);
   server.on("/2.htm", handlePage2);
   server.on("/x.htm", handleOtherPage); // just another page to explain my usage of HTML pages ...
+  server.on("/r.htm", handleRemote);    // show the data from remote client
   server.on("/f.css", handleCss);       // a stylesheet
 
   server.onNotFound(handleNotFound);
@@ -102,6 +113,7 @@ void setup(void)
   server.on("/j.js", handleJs); // javscript based on fetch API to update the page
   server.on("/json", handleJson); // send data in JSON format
   server.on("/c.php", handleCommand); // process commands
+  server.on("/d.php", handleData); // process data
 
   /////////////////////////////////////////////////////////
   // Hook examples
@@ -177,6 +189,12 @@ void setup(void)
 
 void loop(void)
 {
+  ss = millis() / 1000;
+  if (clientIntervall > 0 && (ss - clientPreviousSs) >= clientIntervall)
+  {
+    sendPost();
+    clientPreviousSs = ss;
+  }
   server.handleClient();
   MDNS.update();
   ArduinoOTA.handle(); // OTA Upload via ArduinoIDE
