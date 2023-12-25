@@ -30,28 +30,28 @@
 
 //#include <credentials.h>                                   // my credentials - remove before upload
 
-#define VERSION "8.3.1"                                    // the version of this sketch
+#define VERSION "3.0"                                    // the version of this sketch
                                                            
-#define USE_BOARD 109                                      // the actual board to compile
+#define USE_BOARD 156                                      // the actual board to compile
 
 /* *******************************************************************
          the board settings / die Einstellungen der verschiedenen Boards
  ********************************************************************/
 
-#if USE_BOARD == 103                                       // example board
-#define TXT_BOARDID "103"                                  // an ID for the board
+#if USE_BOARD == 155                                       // example board
+#define TXT_BOARDID "155"                                  // an ID for the board
 #define TXT_BOARDNAME "ESP8266 Server Client"              // the name of the board
 #define CSS_MAINCOLOR "blue"                               // don't get confused by the different webservers and use different colors
 const uint16_t clientIntervall = 0;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
-const char* sendHttpTo = "http://172.18.67.109/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+const char* sendHttpTo = "http://http://192.168.178.156/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
 #endif
 
-#if USE_BOARD == 109                                       // example Board
-#define TXT_BOARDID "109"                                  // an ID for the board
+#if USE_BOARD == 156                                       // example Board
+#define TXT_BOARDID "156"                                  // an ID for the board
 #define TXT_BOARDNAME "ESP8266 Server Client"              // the name of the board 
 #define CSS_MAINCOLOR "green"                              // don't get confused by the different webservers and use different colors
 const uint16_t clientIntervall = 30;                       // intervall to send data to a server in seconds. Set to 30 if you want to send data each 30 seconds
-const char* sendHttpTo = "http://172.18.67.103/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+const char* sendHttpTo = "http://http://192.168.178.155/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
 #endif
 
 /* *******************************************************************
@@ -59,8 +59,8 @@ const char* sendHttpTo = "http://172.18.67.103/d.php";     // the module will se
  ********************************************************************/
 
 #ifndef STASSID                        // either use an external .h file containing STASSID and STAPSK or ...
-#define STASSID "your-ssid"            // ... modify these line to your SSID
-#define STAPSK  "your-password"        // ... and set your WIFI password
+#define STASSID "Zehentner"            // ... modify these line to your SSID
+#define STAPSK  "ElisabethScho"        // ... and set your WIFI password
 #endif
 
 const char* ssid = STASSID;
@@ -104,7 +104,7 @@ void setup(void) {
   pinMode(BUTTON1_PIN, INPUT);
   pinMode(OUTPUT1_PIN, OUTPUT);
   pinMode(OUTPUT2_PIN, OUTPUT);
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println(F("\n" TXT_BOARDNAME "\nVersion: " VERSION " Board " TXT_BOARDID " "));
   Serial.print  (__DATE__);
   Serial.print  (F(" "));
