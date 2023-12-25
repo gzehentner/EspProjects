@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>                             // for the webclient https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266HTTPClient
 #include <ESP8266mDNS.h>
 #include <ArduinoOTA.h> // OTA Upload via ArduinoIDE
 
@@ -29,7 +30,7 @@ uint32_t clientPreviousSs = 0 - clientIntervall; // last second when data was se
 
 #define TXT_BOARDNAME "ESP8266"
 #define TXT_BOARDID "DevBoard"
-#define VERSION "1.1"
+#define VERSION "2.0"
 const char* sendHttpTo = "http://172.168.178.999/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
 
 
