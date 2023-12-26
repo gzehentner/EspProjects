@@ -1,3 +1,17 @@
+/*
+=============================================
+Wasserstand_V2
+
+- Wasserstand abfragen anhand von vier Relais Ausgängen
+- Aktiven Bereich anzeigen
+- Hintergrundfarbe abhängig von Warn- oder Alarmlevel
+- Info auf WebSeite anzeigen
+- Info auf AskSensors weiterleiten (hier soll eine Info-Mail generiert werden bei Überschreiben des Alarmlevel)
+- Evtl. als neues Feature: Info-Mail
+
+Code Basiert auf dem ServerClientTutorial
+
+*/
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
