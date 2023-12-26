@@ -10,6 +10,7 @@
    php                  not really php - only a resource doing actions and not returning content (just http header 204 ok)
    ***************************************************************** */
 
+/*
 void handleOtherPage()
 // a very simple example how to output a HTML page from program memory
 {
@@ -29,7 +30,7 @@ void handleOtherPage()
                "</html>");
   server.send(200, "text/html", message);
 }
-
+*/
 
 void handleNotFound() {
   // Output a "404 not found" page. It includes the parameters which comes handy for test purposes.
@@ -156,7 +157,7 @@ void handlePage()
   server.send(200, "text/html", message);
 }
 
-
+/*
 // *** Page 1 ***  1.htm
 void handlePage1()
 {
@@ -193,8 +194,9 @@ void handlePage1()
   addBottom(message);
   server.send(200, "text/html", message);
 }
+*/
 
-
+/*
 // *** Page 2 ***  2.htm
 void handlePage2()
 {
@@ -218,7 +220,8 @@ void handlePage2()
   addBottom(message);
   server.send(200, "text/html", message);
 }
-
+*/
+/*
 // *** Remote Page ***  r.htm
 void handlePageR()
 {
@@ -271,7 +274,7 @@ void handlePageR()
   addBottom(message);
   server.send(200, "text/html", message);
 }
-
+*/
 
 void handleCss()
 {
@@ -324,7 +327,7 @@ void handleJson() {
 }
 
 
-void handleCommand() {
+v/*oid handleCommand() {
   // receive command and handle accordingly
   // Serial.println(F("D322 handleCommand"));
   for (uint8_t i = 0; i < server.args(); i++) {
@@ -365,7 +368,8 @@ void handleCommand() {
   }
   server.send(204);                      // this page doesn't send back content --> 204
 }
-
+*/
+/*
 
 void handleData() {
   // receives data from a remote board and saves data to local variables
@@ -410,7 +414,7 @@ void handleData() {
   }
   server.send(200, "text/plain", "OK");          // this page returns just a simple OK
 }
-
+*/
 
 void handleJs() {
   // Output: a fetch API / JavaScript

@@ -1,6 +1,7 @@
 /* *******************************************************************
    Webclient
    ***************************************************************** */
+/* Used later
 
 void sendPost()
 // send data as POST to another webserver
@@ -45,6 +46,7 @@ void sendPost()
 
   client.end();  //Close connection
 }
+*/
 
 /*
 void sendPost_V2()
