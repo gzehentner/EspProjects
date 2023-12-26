@@ -9,189 +9,180 @@ Wasserstand_V2
 - Info auf AskSensors weiterleiten (hier soll eine Info-Mail generiert werden bei Überschreiben des Alarmlevel)
 - Evtl. als neues Feature: Info-Mail
 
-Code Basiert auf dem ServerClientTutorial
+Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 
 */
+/* *******************************************************************
+   ESP8266 Server and Client
+   by noiasca:
+
+   Hardware
+   - NodeMCU / ESP8266
+
+   Short
+   - simple webserver with some pages
+   - Stylesheet (css) optimized for mobile devices
+   - webseite update with fetch API
+   - control pins via webpage
+   - a webclient can send data to another webserver
+   - ArduinoOTA upload with Arduino IDE
+   - see the full tutorial on: https://werner.rothschopf.net/201809_arduino_esp8266_server_client_0.htm
+
+   Open Tasks
+   - open serial monitor and send an g to test client and
+
+   Version
+   2021-07-21 (compiles with ESP8266 core 2.7.4 without warnings)
+***************************************************************** */
+
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
-#include <ArduinoOTA.h> // OTA Upload via ArduinoIDE
+#include <ESP8266WebServer.h>                              // for the webserver
+#include <ESP8266HTTPClient.h>                             // for the webclient https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266HTTPClient
+#include <ESP8266mDNS.h>                                   // Bonjour/multicast DNS, finds the device on network by name
+#include <ArduinoOTA.h>                                    // OTA Upload via ArduinoIDE
 
-#ifndef STASSID
-#define STASSID "Zehentner"
-#define STAPSK "ElisabethScho"
+//#include <credentials.h>                                   // my credentials - remove before upload
+
+#define VERSION "0.1"                                    // the version of this sketch
+                                                           
+#define USE_BOARD 153                                      // the actual board to compile
+
+/* *******************************************************************
+         the board settings / die Einstellungen der verschiedenen Boards
+ ********************************************************************/
+
+#if USE_BOARD == 155                                       // example board
+#define TXT_BOARDID "155"                                  // an ID for the board
+#define TXT_BOARDNAME "ESP8266 Server Client"              // the name of the board
+#define CSS_MAINCOLOR "blue"                               // don't get confused by the different webservers and use different colors
+const uint16_t clientIntervall = 0;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
+const char* sendHttpTo = "http://192.168.178.153/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
 #endif
 
-const char *ssid = STASSID;
-const char *password = STAPSK;
+#if USE_BOARD == 153                                       // example Board
+#define TXT_BOARDID "153"                                  // an ID for the board
+#define TXT_BOARDNAME "ESP8266 Server Client"              // the name of the board 
+#define CSS_MAINCOLOR "green"                              // don't get confused by the different webservers and use different colors
+const uint16_t clientIntervall = 30;                       // intervall to send data to a server in seconds. Set to 30 if you want to send data each 30 seconds
+const char* sendHttpTo = "http://192.168.178.155/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+#endif
 
-ESP8266WebServer server(80);
+/* *******************************************************************
+         other settings / weitere Einstellungen für den Anwender
+ ********************************************************************/
 
-const int led = 2;
+#ifndef STASSID                        // either use an external .h file containing STASSID and STAPSK or ...
+#define STASSID "Zehentner"            // ... modify these line to your SSID
+#define STAPSK  "ElisabethScho"        // ... and set your WIFI password
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
 
 /* *******************************************************************
          Globals - Variables and constants
  ********************************************************************/
 
-const uint16_t clientIntervall = 0;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
-
 unsigned long ss = 0;                            // current second since startup
 const uint16_t ajaxIntervall = 5;                // intervall for AJAX or fetch API call of website in seconds
 uint32_t clientPreviousSs = 0 - clientIntervall; // last second when data was sent to server
 
+const uint8_t BUTTON1_PIN = 0;                   // GPIO00/D3 on NodeMCU is the Flash Button - use this for testing an input
+const uint8_t OUTPUT1_PIN = 16;                  // GPIO16/D0 on NodeMCU is a (somtimes red, sometimes blue) LED on the NodeMCU Board - use this for testing the html switch
+const uint8_t OUTPUT2_PIN = 2;                   // GPIO02/D4 on NodeMCU is the (blue) LED on the ESP-12E
+                                                 
+ADC_MODE(ADC_VCC);                               // to use getVcc
+uint32_t internalVcc = ESP.getVcc();             // this will be used to measure the internal voltage
 
-#define TXT_BOARDNAME "ESP8266"
-#define TXT_BOARDID "DevBoard"
-#define VERSION "1.1"
-const char* sendHttpTo = "http://172.168.178.999/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+ESP8266WebServer server(80);                     // an instance for the webserver
 
-
-#define BUTTON1_PIN 3 // RX
-#define OUTPUT1_PIN 5 // D1
-#define OUTPUT2_PIN 4 // D2
-
-#define CSS_MAINCOLOR "blue" 
-
-void setup(void)
-{
-  pinMode(led, OUTPUT);
-  digitalWrite(led, 0);
-
-  // setup serial monitor
-  Serial.begin(9600);
-  Serial.println("");
-
-  // setup WIFI
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-
-  // Wait for connection
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  if (MDNS.begin("esp8266"))
-  {
-    Serial.println("MDNS responder started");
-  }
-
-  server.on("/", handleRoot);
-
-  server.on("/inline", []()
-            { server.send(200, "text/plain", "this works as well"); });
-
-  server.on("/gif", []()
-            {
-    static const uint8_t gif[] PROGMEM = {
-      0x47, 0x49, 0x46, 0x38, 0x37, 0x61, 0x10, 0x00, 0x10, 0x00, 0x80, 0x01,
-      0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x2c, 0x00, 0x00, 0x00, 0x00,
-      0x10, 0x00, 0x10, 0x00, 0x00, 0x02, 0x19, 0x8c, 0x8f, 0xa9, 0xcb, 0x9d,
-      0x00, 0x5f, 0x74, 0xb4, 0x56, 0xb0, 0xb0, 0xd2, 0xf2, 0x35, 0x1e, 0x4c,
-      0x0c, 0x24, 0x5a, 0xe6, 0x89, 0xa6, 0x4d, 0x01, 0x00, 0x3b
-    };
-    char gif_colored[sizeof(gif)];
-    memcpy_P(gif_colored, gif, sizeof(gif));
-    // Set the background to a random set of colors
-    gif_colored[16] = millis() % 256;
-    gif_colored[17] = millis() % 256;
-    gif_colored[18] = millis() % 256;
-    server.send(200, "image/gif", gif_colored, sizeof(gif_colored)); });
-  server.on("/0.htm", handlePage);
-  server.on("/1.htm", handlePage1);
-  server.on("/2.htm", handlePage2);
-  server.on("/x.htm", handleOtherPage); // just another page to explain my usage of HTML pages ...
-  server.on("/f.css", handleCss);       // a stylesheet
-
-  server.onNotFound(handleNotFound);
-
-  server.on("/j.js", handleJs); // javscript based on fetch API to update the page
-  server.on("/json", handleJson); // send data in JSON format
-  server.on("/c.php", handleCommand); // process commands
-
-  /////////////////////////////////////////////////////////
-  // Hook examples
-
-  server.addHook([](const String &method, const String &url, WiFiClient *client, ESP8266WebServer::ContentTypeFunction contentType)
-                 {
-    (void)method;       // GET, PUT, ...
-    (void)url;          // example: /root/myfile.html
-    (void)client;       // the webserver tcp client connection
-    (void)contentType;  // contentType(".html") => "text/html"
-    Serial.printf("A useless web hook has passed\n");
-    Serial.printf("(this hook is in 0x%08x area (401x=IRAM 402x=FLASH))\n", esp_get_program_counter());
-    return ESP8266WebServer::CLIENT_REQUEST_CAN_CONTINUE; });
-
-  server.addHook([](const String &, const String &url, WiFiClient *, ESP8266WebServer::ContentTypeFunction)
-                 {
-    if (url.startsWith("/fail")) {
-      Serial.printf("An always failing web hook has been triggered\n");
-      return ESP8266WebServer::CLIENT_MUST_STOP;
-    }
-    return ESP8266WebServer::CLIENT_REQUEST_CAN_CONTINUE; });
-
-  server.addHook([](const String &, const String &url, WiFiClient *client, ESP8266WebServer::ContentTypeFunction)
-                 {
-    if (url.startsWith("/dump")) {
-      Serial.printf("The dumper web hook is on the run\n");
-
-      // Here the request is not interpreted, so we cannot for sure
-      // swallow the exact amount matching the full request+content,
-      // hence the tcp connection cannot be handled anymore by the
-      // webserver.
-#ifdef STREAMSEND_API
-      // we are lucky
-      client->sendAll(Serial, 500);
-#else
-      auto last = millis();
-      while ((millis() - last) < 500) {
-        char buf[32];
-        size_t len = client->read((uint8_t*)buf, sizeof(buf));
-        if (len > 0) {
-          Serial.printf("(<%d> chars)", (int)len);
-          Serial.write(buf, len);
-          last = millis();
-        }
-      }
+#ifndef CSS_MAINCOLOR
+#define CSS_MAINCOLOR "#8A0829"                  // fallback if no CSS_MAINCOLOR was declared for the board
 #endif
-      // Two choices: return MUST STOP and webserver will close it
-      //                       (we already have the example with '/fail' hook)
-      // or                  IS GIVEN and webserver will forget it
-      // trying with IS GIVEN and storing it on a dumb WiFiClient.
-      // check the client connection: it should not immediately be closed
-      // (make another '/dump' one to close the first)
-      Serial.printf("\nTelling server to forget this connection\n");
-      static WiFiClient forgetme = *client;  // stop previous one if present and transfer client refcounter
-      return ESP8266WebServer::CLIENT_IS_GIVEN;
-    }
-    return ESP8266WebServer::CLIENT_REQUEST_CAN_CONTINUE; });
 
-  // Hook examples
-  /////////////////////////////////////////////////////////
+//values from the remote device will be stored in this variables:
+uint8_t remoteBoardId = 0;                       // will save the remote board ID
+uint8_t remoteButton1 = 0;                       // the input GPIO from the remote ESP
+uint8_t remoteOutput1 = 0;                       // the output GPIO from the remote ESP
+uint8_t remoteOutput2 = 0;                       // the output GPIO from the remote ESP
+uint32_t remoteVcc = 0;                          // the voltage mesarued by remote ESP
+uint32_t remoteMessagesSucessfull = 0;           // counter, how many messages where received
+uint32_t remoteLastMessage = 0;                  // last message from remote ESP
 
-  server.begin();
-  Serial.println("HTTP server started");
+/* *******************************************************************
+         S E T U P
+ ********************************************************************/
 
-  ArduinoOTA.begin(); // OTA Upload via ArduinoIDE
-  ArduinoOTA.setPassword("11er");
-
+void setup(void) {
   pinMode(BUTTON1_PIN, INPUT);
   pinMode(OUTPUT1_PIN, OUTPUT);
   pinMode(OUTPUT2_PIN, OUTPUT);
+  Serial.begin(9600);
+  Serial.println(F("\n" TXT_BOARDNAME "\nVersion: " VERSION " Board " TXT_BOARDID " "));
+  Serial.print  (__DATE__);
+  Serial.print  (F(" "));
+  Serial.println(__TIME__);
 
+  char myhostname[8] = {"esp"};
+  strcat(myhostname, TXT_BOARDID);
+  WiFi.hostname(myhostname);
+  WiFi.begin(ssid, password);
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println(F(""));
+  Serial.print(F("Connected to "));
+  Serial.println(ssid);
+  Serial.print(F("IP address: "));
+  Serial.println(WiFi.localIP());
+  if (MDNS.begin("esp8266")) {
+    Serial.println(F("MDNS responder started"));
+  }
+  //define the pages and other content for the webserver
+  server.on("/",      handlePage);               // send root page
+  server.on("/0.htm", handlePage);               // a request can reuse another handler
+  server.on("/1.htm", handlePage1);               
+  server.on("/2.htm", handlePage2);               
+  server.on("/x.htm", handleOtherPage);          // just another page to explain my usage of HTML pages ...
+  
+  server.on("/f.css", handleCss);                // a stylesheet                                             
+  server.on("/j.js",  handleJs);                 // javscript based on fetch API to update the page
+  //server.on("/j.js",  handleAjax);             // a javascript to handle AJAX/JSON update of the page  https://werner.rothschopf.net/201809_arduino_esp8266_server_client_2_ajax.htm                                                
+  server.on("/json",  handleJson);               // send data in JSON format
+  server.on("/c.php", handleCommand);            // process commands
+  server.on("/favicon.ico", handle204);          // process commands
+  server.onNotFound(handleNotFound);             // show a typical HTTP Error 404 page
+
+  //the next two handlers are necessary to receive and show data from another module
+  server.on("/d.php", handleData);               // receives data from another module
+  server.on("/r.htm", handlePageR);              // show data as received from the remote module
+
+  server.begin();                                // start the webserver
+  Serial.println(F("HTTP server started"));
+
+  //IDE OTA
+  ArduinoOTA.setHostname(myhostname);            // give a name to your ESP for the Arduino IDE
+  ArduinoOTA.begin();                            // OTA Upload via ArduinoIDE https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html
 }
 
-void loop(void)
-{
-  server.handleClient();
-  MDNS.update();
-  ArduinoOTA.handle(); // OTA Upload via ArduinoIDE
+/* *******************************************************************
+         M A I N L O O P
+ ********************************************************************/
 
+void loop(void) {
+  ss = millis() / 1000;
+  if (clientIntervall > 0 && (ss - clientPreviousSs) >= clientIntervall)
+  {
+    sendPost();
+    clientPreviousSs = ss;
+  }
+  server.handleClient();
+  ArduinoOTA.handle();       // OTA Upload via ArduinoIDE
+
+  // do your calculation, sensor readings etc...
+
+  // add displays, serial outputs here
 }
