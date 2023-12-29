@@ -44,29 +44,19 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 
 //#include <credentials.h>                                   // my credentials - remove before upload
 
-#define VERSION "0.1"                                    // the version of this sketch
+#define VERSION "2.0"                                    // the version of this sketch
                                                            
-#define USE_BOARD 153                                      // the actual board to compile
-
 /* *******************************************************************
          the board settings / die Einstellungen der verschiedenen Boards
  ********************************************************************/
 
-#if USE_BOARD == 155                                       // example board
-#define TXT_BOARDID "155"                                  // an ID for the board
-#define TXT_BOARDNAME "ESP8266 Server Client"              // the name of the board
+#define TXT_BOARDID "164"                                  // an ID for the board
+#define TXT_BOARDNAME "Wasserstand-Messung"                // the name of the board
 #define CSS_MAINCOLOR "blue"                               // don't get confused by the different webservers and use different colors
 const uint16_t clientIntervall = 0;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
 const char* sendHttpTo = "http://192.168.178.153/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
-#endif
 
-#if USE_BOARD == 153                                       // example Board
-#define TXT_BOARDID "153"                                  // an ID for the board
-#define TXT_BOARDNAME "ESP8266 Server Client"              // the name of the board 
-#define CSS_MAINCOLOR "green"                              // don't get confused by the different webservers and use different colors
-const uint16_t clientIntervall = 30;                       // intervall to send data to a server in seconds. Set to 30 if you want to send data each 30 seconds
-const char* sendHttpTo = "http://192.168.178.155/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
-#endif
+
 
 /* *******************************************************************
          other settings / weitere Einstellungen für den Anwender
@@ -110,10 +100,10 @@ int incomingByte = 0; // for incoming serial data
 
 /* -- Alarm-Level -- */
 #define Level_AHH 190     // Oberkante Schacht = 197cm
-#define Level_AH  170     // Zwischenstand
-#define Level_AL  145     // Unterkante KG Rohr
-#define Level_ALL 125     // Aktueller Niedrig-Stand Nov 2023 = 105cm
-
+#define Level_AH  185     // Zwischenstand
+#define Level_AL  180     
+#define Level_ALL 145     // Unterkante KG Rohr
+                         // Aktueller Niedrig-Stand Nov 2023 = 105cm
 
 ESP8266WebServer server(80);                     // an instance for the webserver
 
@@ -201,7 +191,7 @@ void loop(void) {
   ss = millis() / 1000;
   if (clientIntervall > 0 && (ss - clientPreviousSs) >= clientIntervall)
   {
-    sendPost();
+ //   sendPost();
     clientPreviousSs = ss;
   }
   server.handleClient();
@@ -211,5 +201,12 @@ void loop(void) {
   val_AH  = digitalRead(GPin_AH);
   val_AL  = digitalRead(GPin_AL);
   val_ALL = digitalRead(GPin_ALL);
+
+  // Serial.println(val_AHH);
+  // Serial.println(val_AH );
+  // Serial.println(val_AL );
+  // Serial.println(val_ALL);
+
+  //delay(1000);
 
 }

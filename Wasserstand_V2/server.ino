@@ -72,7 +72,7 @@ void addTop(String &message)
   message += F("<body>\n");
   //message += F("<body onload='GetSwitchState(0)'>\n");  // if you are using AJAX/XMLHttpRequest you have to add the onload request
   message += F("<header>\n<h1>" TXT_BOARDNAME " - Board " TXT_BOARDID "</h1>\n"
-               "<nav><p><a href=\"/\">[Home]</a> <a href=\"1.htm\">[Page&nbsp;1]</a> <a href=\"2.htm\">[The&nbsp;Webclient]</a> <a href=\"r.htm\">[Remote&nbsp;Module]</a> <a href=\"x.htm\">[Page&nbsp;X]</a></p></nav>\n</header>\n"
+               "<nav><p><a href=\"/\">[Home]</a> <a href=\"2.htm\">[The&nbsp;Webclient]</a> </p></nav>\n</header>\n"
                "<main>\n");
 }
 
@@ -120,161 +120,43 @@ void handlePage()
   String message;
   addTop(message);
 
-  message += F("<article>\n"
-               "<h2>Homepage</h2>\n"                                                   // here you write your html code for your homepage. Let's give some examples...
-               "<p>This is an example for a webserver on your ESP8266. "
-               "Values are getting updated with Fetch API/JavaScript and JSON.</p>\n"
+  message += F("<article>"
+               "<h2>Wasserstand Zehentner Teisendorf</h2>"                                                   // here you write your html code for your homepage. Let's give some examples...
+               "<p>Hier kann man den aktuellen Wasserstand in der Regenwasser-Zisterne  "
+               "von Georg Zehentner, Streiblweg 19, Teisendorf ablesen.<br> "
+               " Bei Überschreiten des Höchststand muss eine Pumpe aktiviert werden</p>\n"
                "</article>\n");
 
   message += F("<article>\n"
-               "<h2>Values (with update)</h2>\n");
-  message += F("<p>Internal Voltage measured by ESP: <span id='internalVcc'>");        // example how to show values on the webserver
-  message += ESP.getVcc();
-  message += F("</span>mV</p>\n");
-
-  message += F("<p>Button 1: <span id='button1'>");                                    // example how to show values on the webserver
-  message += digitalRead(BUTTON1_PIN);
-  message += F("</span></p>\n");
-
-  message += F("<p>Output 1: <span id='output1'>");                                    // example 3
-  message += digitalRead(OUTPUT1_PIN);
-  message += F("</span></p>\n");
-
-  message += F("<p>Output 2: <span id='output2'>");                                    // example 4
-  message += digitalRead(OUTPUT2_PIN);
-  message += F("</span></p>\n"
-               "</article>\n");
+               "<h2>Rohdaten</h2>\n");
+  
+  // input signals are low active
+  message += F("Level Alarm   high: <span id='val_AHH'>");  if (val_AHH==0 ) {message += F("active");} else {message += F("--");} message += F("</span><br>");
+  message += F("Level Warning high: <span id='val_AH' >");  if (val_AH ==0 ) {message += F("active");} else {message += F("--");} message += F("</span><br>");
+  message += F("Level Warning low:  <span id='val_AL' >");  if (val_AL ==0 ) {message += F("active");} else {message += F("--");} message += F("</span><br>");
+  message += F("Level Alarm   low:  <span id='val_ALL'>");  if (val_ALL==0 ) {message += F("active");} else {message += F("--");} message += F("</span><br>");
+  message += F("</article>\n");
 
   message += F("<article>\n"
-               "<h2>Switch</h2>\n"                                                     // example how to switch/toggle an output
-               "<p>Example how to switch/toggle outputs, or to initiate actions. The buttons are 'fake' buttons and only styled by CSS. Click to toggle the output.</p>\n"
-               "<p class='off'><a href='c.php?toggle=1' target='i'>Output 1</a></p>\n"
-               "<p class='off'><a href='c.php?toggle=2' target='i'>Output 2</a></p>\n"
-               "<iframe name='i' style='display:none' ></iframe>\n"                    // hack to keep the button press in the window
-               "</article>\n");
-
-  addBottom(message);
-  server.send(200, "text/html", message);
-}
-
-/*
-// *** Page 1 ***  1.htm
-void handlePage1()
-{
-  String message;
-  addTop(message);
-
-  message += F("<article>\n"
-               "<h2>Page 1</h2>\n"
-               "<p>This is example content for [Page 1]<p>\n"
-               "</article>\n"
-
-               "<article>\n"
-               "<h2>\"Mobile First\"</h2>\n"
-               "<p>\"Mobile First\" means that the pages are optimized for smartphones. "
-               "The content width is narrow. Each time you start a new article session, a box will be generated. "
-               "This box will float: on smartphones in portrait mode they will be aligned vertically, "
-               "on monitors in landscape mode, the article boxes will be aligned horizontally. "
-               "If you don't like this effect, you have to adopt the stylesheet (f.css)."
-               "</p>\n"
-               "</article>\n"
-
-               "<article>\n"
-               "<h2>Lorem ipsum</h2>\n"
-               "<p>Lorem ipsum dolor sit amet, consectetur adipisici elit, "
-               "sed eiusmod tempor incidunt ut labore et dolore magna aliqua. "
-               "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris "
-               " nisi ut aliquid ex ea commodi consequat. "
-               "Quis aute iure reprehenderit in voluptate velit esse cillum dolore "
-               "eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat "
-               "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. "
-               "</p>\n"
-               "</article>\n"
-              );
-  addBottom(message);
-  server.send(200, "text/html", message);
-}
-*/
-
-/*
-// *** Page 2 ***  2.htm
-void handlePage2()
-{
-  String message;
-  addTop(message);
-
-  message += F("<article>\n"
-               "<h2>The webclient</h2>\n"
-               "<p>Some words about the weblient ('client'): The client will send data to a server.<p>\n"
-               "<p>To be precise, the client on this module will send each ");
-  message += clientIntervall;
-  message += F(" seconds to a resource at<br>");
-  message += sendHttpTo;
-  message += F("<br>which you can set up in the configuration part. It consists of the webserver adress and a page. You must ensure, that the webserver and the called page is available, otherwise the request will fail.<p>\n"
-               "<p>Optionally you can send a command to force the webclient to send manually</p>\n"
-               "<p><a href='c.php?CMD=CLIENT' target='i' class='on'>Send now</a></p>\n"
-               "<iframe name='i' style='display:none' ></iframe>\n"
-               "<p>If the other webserver shares the same source code like this module - it should be able to collect the data from this module.</p>\n"
-               "</article>\n"
-              );
-  addBottom(message);
-  server.send(200, "text/html", message);
-}
-*/
-/*
-// *** Remote Page ***  r.htm
-void handlePageR()
-{
-  String message;
-  addTop(message);
-  message += F("<article>\n"
-               "<h2>Remote Module</h2>\n"
-               "<p>This page shows values which were received from a remote module.<p>\n"
-               "<table>\n"
-               "<tr><th>variable</th><th>value</th></tr>\n"
-
-               "<tr><td>remoteBoardId</td><td>");
-  message += remoteBoardId;
-  message += F("</td></tr>\n"
-
-               "<tr><td>remoteVcc</td><td>");
-  message += remoteVcc;
-  message += F("</td></tr>\n"
-
-               "<tr><td>remoteButton1</td><td>");
-  message += remoteButton1;
-  message += F("</td></tr>\n"
-
-               "<tr><td>remoteOutput1</td><td>");
-  message += remoteOutput1;
-  message += F("</td></tr>\n"
-
-               "<tr><td>remoteOutput2</td><td>");
-  message += remoteOutput2;
-  message += F("</td></tr>\n");
-
-  if (remoteMessagesSucessfull > 0)
-  {
-    message += F("<tr><td>remoteMessagesSucessfull</td><td>");
-    message += remoteMessagesSucessfull;
-    message += F("</td></tr>\n"
-                 "<tr><td>seconds since last message</td><td>");
-    message += (millis() / 1000) - remoteLastMessage;
-    message += F("</td></tr>\n");
+               "<h2>Auswertung Wasserstand</h2>\n");
+  if ((val_AHH == 0 ) && (val_AH == 0)) {
+    message += F("<message_err> Achtung Hochwasser -- Pumpe einschalten <br>Wasserstand > ");message += Level_AHH;message += F("<br></message_err>");
+  } else if  (val_AH == 0) {
+    message += F("<message_warn> Wasserstand ist zwischen "); message += Level_AH;  message += F(" und ");  message += Level_AHH; message += F( "<br></message_warn>");
+  } else if (val_AL == 1) {
+    message += F("<message_ok> Wasserstand ist zwischen "); message += Level_AL;  message += F(" und ");  message += Level_AH;  message += F( "<br></message_ok>");
+  } else if ((val_AL == 0) && (val_ALL == 1)) {
+    message += F("<message_ok> Wasserstand ist zwischen "); message += Level_ALL; message += F(" und ");  message += Level_AL;  message += F( "<br></message_ok>");
+  } else if ((val_ALL == 0)) {
+    message += F("<message_ok>   Wasserstand < ");message += Level_ALL;message += F("<br></message_ok>");
   }
-  else
-  {
-    message += F("<tr><td>no external data received so far</td><td>-</td>");
-  }
-  message += F("</table>\n"
-               "<p>If this module (the 'server') receives data from another remote module (the 'client'), data will be displayed.</p>\n"
-               "<p>The data for the remote module is not updated, therefore you will need to reload this page. You can modify the handleJson() and this page to add that data.</p>\n"
-               "</article>\n"
-              );
+  message += F("</article>\n");
+
   addBottom(message);
   server.send(200, "text/html", message);
 }
-*/
+
+
 
 void handleCss()
 {
@@ -302,119 +184,33 @@ void handleCss()
               "nav p{margin:0px;padding:0px}\n"
               ".on, .off{margin-top:0;margin-bottom:0.2em;margin-left:4em;font-size:1.4em;background-color:#C0C0C0;border-style:solid;border-radius:10px;border-style:outset;width:5em;height:1.5em;text-decoration:none;text-align:center}\n"
               ".on{border-color:green}\n"
-              ".off{border-color:red}\n");
+              ".off{border-color:red}\n"
+              "message_ok  {color:white;vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:green ;width:19em;text-align:center}\n" 
+              "message_warn{color:white;vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:orange;width:19em;text-align:center}\n" 
+              "message_err {color:white;vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:red   ;width:19em;text-align:center}\n" 
+              );
   server.send(200, "text/css", message);
 }
-
 
 void handleJson() {
   // Output: send data to browser as JSON
   // after modification always check if JSON is still valid. Just call the JSON (json) in your webbrowser and check.
-  // Serial.println(F("D268 requested json"));
+  Serial.println(F("D268 requested json"));
   String message = "";
   message = (F("{\"ss\":"));                     // Start of JSON and the first object "ss":
   message += millis() / 1000;
-  message += (F(",\"internalVcc\":"));
-  message += ESP.getVcc();
-  message += (F(",\"button1\":"));
-  message += digitalRead(BUTTON1_PIN);
-  message += (F(",\"output1\":"));
-  message += digitalRead(OUTPUT1_PIN);
-  message += (F(",\"output2\":"));
-  message += digitalRead(OUTPUT2_PIN);
+  message += (F(",\"val_AHH\":"));
+  message += digitalRead(GPin_AHH);
+  message += (F(",\"val_AH\":"));
+  message += digitalRead(GPin_AH);
+  message += (F(",\"val_AL\":"));
+  message += digitalRead(GPin_AL);
+  message += (F(",\"val_ALL\":"));
+  message += digitalRead(GPin_ALL);
   message += (F("}"));                           // End of JSON
   server.send(200, "application/json", message); // set MIME type https://www.ietf.org/rfc/rfc4627.txt
 }
 
-
-v/*oid handleCommand() {
-  // receive command and handle accordingly
-  // Serial.println(F("D322 handleCommand"));
-  for (uint8_t i = 0; i < server.args(); i++) {
-    Serial.print(server.argName(i));
-    Serial.print(F(": "));
-    Serial.println(server.arg(i));
-  }
-  if (server.argName(0) == "toggle")                                 // the parameter which was sent to this server
-  {
-    if (server.arg(0) == "1")                                        // the value for that parameter
-    {
-      Serial.println(F("D232 toggle output1"));
-      if (digitalRead(OUTPUT1_PIN)) {                                // toggle: if the pin was on - switch it of and vice versa
-        digitalWrite(OUTPUT1_PIN, LOW);
-      } else {
-        digitalWrite(OUTPUT1_PIN, HIGH);
-      }
-    }
-    if (server.arg(0) == "2")                                        // the value for that parameter
-    {
-      Serial.println(F("D232 toggle output2"));
-      if (digitalRead(OUTPUT2_PIN)) {
-        digitalWrite(OUTPUT2_PIN, LOW);
-      } else {
-        digitalWrite(OUTPUT2_PIN, HIGH);
-      }
-    }
-  }
-  else if (server.argName(0) == "CMD" && server.arg(0) == "RESET")   // Example how to reset the module. Just send ?CMD=RESET
-  {
-    Serial.println(F("D238 will reset"));
-    ESP.restart();
-  }
-  else if (server.argName(0) == "CMD" && server.arg(0) == "CLIENT")  // Example how to manually start the webclient
-  {
-    Serial.println(F("D321 will send data with webclient"));
-    sendPost();
-  }
-  server.send(204);                      // this page doesn't send back content --> 204
-}
-*/
-/*
-
-void handleData() {
-  // receives data from a remote board and saves data to local variables
-  // it uses similar method like the command processing: we receive parameters and store them in variables
-  // Serial.println(F("D366 handleData()"));
-  uint8_t counter = 0;  // will count valid values, can be used for error-handling
-  for (uint8_t i = 0; i < server.args(); i++) {
-    Serial.print(server.argName(i));
-    Serial.print(F(": "));
-    Serial.println(server.arg(i));
-    if (server.argName(i) == "board")
-    {
-      remoteBoardId = server.arg(0).toInt();
-      counter++;
-    }
-    else if (server.argName(i) == "vcc")
-    {
-      remoteVcc = server.arg(i).toInt();
-      counter++;
-    }
-    else if (server.argName(i) == "output1")
-    {
-      remoteOutput1 = server.arg(i).toInt();
-      counter++;
-    }
-    else if (server.argName(i) == "output2")
-    {
-      remoteOutput2 = server.arg(i).toInt();
-      counter++;
-    }
-    else if (server.argName(i) == "button1")
-    {
-      remoteButton1 = server.arg(i).toInt();
-      counter++;
-    }
-  }
-  //example for errorhandling
-  if (counter >= 1)
-  {
-    remoteLastMessage = millis() / 1000;         // if ok we store the timestamp as we have received at least one valid value
-    remoteMessagesSucessfull++;                  // increase successfull submits
-  }
-  server.send(200, "text/plain", "OK");          // this page returns just a simple OK
-}
-*/
 
 void handleJs() {
   // Output: a fetch API / JavaScript
@@ -448,43 +244,4 @@ void handleJs() {
   server.send(200, "text/javascript", message);
 }
 
-/*
-  // Output: a JavaScript for an AJAX/XMLHttpRequest
-  // a function in the JavaScript uses AJAX to request a JSON file from the webserver and updates the values on the page if the object names and ID are the same
-  // this function is only needed if you want to try the AJAX way.
-  // it is not needed if you use the fetch API.
-  // see more explanations on https://werner.rothschopf.net/201809_arduino_esp8266_server_client_2_ajax.htm
-  void handleAjax() {
-  String message;
-  message += F("  function GetSwitchState(s) {\n"                              // 0 call function with settimeout, 1 run only once for manual update
-               "   nocache = '&nocache='+ Math.random() * 1000000;\n"
-               "   var request = new XMLHttpRequest(); \n"
-               "   request.onreadystatechange = function() {\n"
-               "   if (this.readyState == 4) {\n"
-               "    if (this.status == 200) {\n"
-               "     if (this.responseText != null) {\n"
-               "      var jo=JSON.parse(this.responseText);\n"
-               "      for (var i in jo)\n"
-               "      {if(document.getElementById(i)) document.getElementById(i).innerHTML=jo[i];}\n"                // as long as the JSON name fits to the HTML ID value will be replaced
-               // add other fields here
-               "      document.getElementById('sec').innerHTML = Math.floor(jo['ss']%60);\n"                         // example how to change a value in the HTML page
-               "      if (jo['ss']>60){document.getElementById('min').innerHTML=Math.floor(jo['ss']/60%60);}\n"
-               "      if (jo['ss']>3600){document.getElementById('hour').innerHTML=Math.floor(jo['ss']/3600%24);}\n"
-               "      if (jo['ss']>86400){document.getElementById('day').innerHTML=Math.floor(jo['ss']/86400%7);}\n"
-               "      if (jo['ss']>604800){document.getElementById('week').innerHTML=Math.floor(jo['ss']/604800%52);}\n");
-  message += F("      document.getElementById('sec').style.color = 'dimgray';\n"
-               "   }}}\n"
-               "   else {document.getElementById('sec').style.color = 'red';}\n"
-               "   }\n"
-               "   request.open('GET', 'json?p=");             // request the JSON output
-  //"   request.open('GET', 'http://172.18.67.103/json?p=");             // request the JSON output
-  message += server.uri();
-  message += F("' + nocache, true);\n"
-               "   request.send(null);\n"
-               "   if (s==0) setTimeout('GetSwitchState(0)', ");
-  message += ajaxIntervall * 1000;
-  message += F(");\n"
-               "   }");
-  server.send(200, "text/javascript", message);
-  }
-*/
+
