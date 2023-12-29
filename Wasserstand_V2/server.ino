@@ -1,107 +1,85 @@
+/* *******************************************************************
+   Webserver
+
+   How it all works together:
+
+   page   0.htm         includes javascript j.js
+   script j.js          the javascript requests the JSON
+          json          returns data as JSON
+   css    f.css         css for all on flash (program) memory
+   php                  not really php - only a resource doing actions and not returning content (just http header 204 ok)
+   ***************************************************************** */
+
 /*
-Georgs server.ino
-*/
-void handleRoot() {
-  /*
-  digitalWrite(led, 1);
-  server.send(200, "text/plain", "hello from esp8266! GZE\r\n");
-  digitalWrite(led, 0);
-  */
-  // create root page with links to subpages
+void handleOtherPage()
+// a very simple example how to output a HTML page from program memory
+{
   String message;
-  addTop(message);
-  message += F("<!DOCTYPE html>\n"
-              "<html lang='en'>\n"
-              "<head>\n"
-              "<title>" TXT_BOARDNAME " - Board " TXT_BOARDID"</title>\n"
-              "</head>\n"
-              "<body>\n"
-              "<article>\n"
-              "<h1>Your webserver on " TXT_BOARDNAME " - Board " TXT_BOARDID " is running!</h1>\n"
-              "</article>\n"
-              "<p></p>\n"
-              "<article>\n"
-              "<h2>Here is a list of subpages</h2>\n"
-              "<p>-  <a href='0.htm'>Page 0 -- handlePage</a></p>\n"
-              "<p>-  <a href='1.htm'>Page 1 -- handlePage1</a></p>\n"
-              "<p>-  <a href='2.htm'>Page 2 -- handlePage2</a></p>\n"
-              "<p>-  <a href='x.htm'>Page x -- handleAnotherPage</a></p>\n"
-              "<p>-  <a href='f.css'>Page f.css</a></p>\n"
-              "<p>-  <a href='j.js'> Page j.js</a></p>\n"
-              "<p>-  <a href='json'> Page json</a></p>\n"
-              "<p>-  <a href='c.php?toggle=3' > Toggle LED</a></p>\n"
-              "<p>-  <a href='c.php?CMD=RESET'> Reset ESP       </a></p>\n"
-              "</article>\n"
-              "</body>\n"
-              "</html>");
-  addBottom(message);
+  message =  F("<!DOCTYPE html>\n"
+               "<html lang='en'>\n"
+               "<head>\n"
+               "<title>" TXT_BOARDNAME " - Board " TXT_BOARDID "</title>\n"
+               "</head>\n"
+               "<body>\n"
+               "<h1>Your webserver on " TXT_BOARDNAME " - Board " TXT_BOARDID " is running!</h1>\n"
+               "<p>This is an example how you can create a webpage.</p>\n"
+               "<p>But as most of my webserver should have the same look and feel I'm using one layout for all html pages.</p>\n"
+               "<p>Therefore my html pages come from the functions starting with handlePage and just share a common top and bottom.</p>\n"
+               "<p>To go back to the formated pages <a href='0.htm'>use this link</a></p>\n"
+               "</body>\n"
+               "</html>");
   server.send(200, "text/html", message);
-
 }
-
-
+*/
 
 void handleNotFound() {
-  digitalWrite(led, 1);
   // Output a "404 not found" page. It includes the parameters which comes handy for test purposes.
   Serial.println(F("D015 handleNotFound()"));
-  
-
   String message;
-  message += F("404 - File Not Found\n\n");
-  message += F("URI: ");
+  message += F("404 - File Not Found\n"
+               "URI: ");
   message += server.uri();
   message += F("\nMethod: ");
   message += (server.method() == HTTP_GET) ? "GET" : "POST";
   message += F("\nArguments: ");
   message += server.args();
   message += F("\n");
-  for (uint8_t i = 0; i < server.args(); i++) { message += " " + server.argName(i) + ": " + server.arg(i) + "\n"; }
+  for (uint8_t i = 0; i < server.args(); i++)
+  {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
   server.send(404, "text/plain", message);
-  digitalWrite(led, 0);
-
 }
 
-void handleOtherPage()
-// a very simple example how to output a HTML page from program memory
+
+void handle204()
+{  
+  server.send(204);                // this page doesn't send back content
+}
+
+
+void addTop(String &message)
 {
-  String message;
-  addTop(message);
-  message += F("<!DOCTYPE html>\n"
-              "<html lang='en'>\n"
-              "<article_wide>\n"
-              "<head>\n"
-              "<title>" TXT_BOARDNAME " - Board " TXT_BOARDID "</title>\n"
-              "</head>\n"
-              "<body>\n"
-              "<h1>Your webserver on " TXT_BOARDNAME " - Board " TXT_BOARDID " is running!</h1>\n"
-              "<p>This is just an example how you can create a webpage.</p>\n"
-              "<p>But as most of my webserver should have the same look and feel"
-              " I'm using one layout for all html pages.</p>\n"
-              "<p>Therefore all my html pages come from the function handlePage()</p>\n"
-              "<p>To go back to the formated pages <a href='/'>use this link</a></p>\n"
-              "</body>\n"
-              "</article_wide>\n"
-              "</html>");
-  addBottom(message);
-  server.send(200, "text/html", message);
+  message =  F("<!DOCTYPE html>\n"
+               "<html lang='en'>\n"
+               "<head>\n"
+               "<title>" TXT_BOARDNAME " - Board " TXT_BOARDID "</title>\n"
+               "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">\n"
+               "<meta name=\"viewport\" content=\"width=device-width\">\n"
+               "<link rel='stylesheet' type='text/css' href='/f.css'>\n"
+               "<script src='j.js'></script>\n"
+               "</head>\n");
+  message += F("<body>\n");
+  //message += F("<body onload='GetSwitchState(0)'>\n");  // if you are using AJAX/XMLHttpRequest you have to add the onload request
+  message += F("<header>\n<h1>" TXT_BOARDNAME " - Board " TXT_BOARDID "</h1>\n"
+               "<nav><p><a href=\"/\">[Home]</a> <a href=\"2.htm\">[The&nbsp;Webclient]</a> </p></nav>\n</header>\n"
+               "<main>\n");
 }
-// Add header to website
-void addTop(String& message) {
-  message = F("<!DOCTYPE html>\n"
-              "<html lang='en'>\n"
-              "<head>\n"
-              "<title>" TXT_BOARDNAME " - Board " TXT_BOARDID "</title>\n"
-              "<link rel='stylesheet' type='text/css' href='/f.css'>\n"
-              "<script src='j.js'></script>\n"
-              "</head>\n");
-}
-// Add footer to website
+
 
 void addBottom(String &message) {
   message += F("</main>\n"
-               "<footer>\n<p>"                 // The footer will display the uptime, the IP the version of the sketch and the compile date/time
-               "<article_wide>\n");
+               "<footer>\n<p>");                 // The footer will display the uptime, the IP the version of the sketch and the compile date/time
   if (ss > 604800)
   {
     message += F("<span id='week'>");
@@ -127,123 +105,59 @@ void addBottom(String &message) {
 
   message += F("<span id='sec'>");
   message += (ss % 60);
-  message += F("</span> seconds since startup | Version " VERSION " \n");
-  message += F( "IP: ");
+  message += F("</span> seconds since startup | Version " VERSION " | IP: ");
   message += WiFi.localIP().toString();
-  message += F(" | " __DATE__ " " __TIME__ " \n");
-  message += F("<nav><text-align:center><a href=/> Klick her to goto Root</a></nav>");
-  message += F("</p>\n</footer>\n</body>\n</html></article_wide>\n");
-
+  message += F(" | " __DATE__ " " __TIME__ "</p>\n</footer>\n</body>\n</html>");
   server.send(200, "text/html", message);
 }
 
+
+// the html output
+// finally check your output if it is valid html: https://validator.w3.org
+// *** HOME ***  0.htm
 void handlePage()
 {
-String message;
-addTop(message);
-
-message += F("<article>\n"
-"<h2>Homepage</h2>\n" // here you write your html code for your homepage. Let's give some examples...
-"<p>This is an example for a webserver on your ESP8266. "
-"Values are getting updated with Fetch API/JavaScript and JSON.</p>\n"
-"</article>\n");
-
-message += F("<article>\n"
-"<h2>Values (with update)</h2>\n");
-message += F("<p>Internal Voltage measured by ESP: <span id='internalVcc'>"); 
-message += ESP.getVcc();
-message += F("</span>mV</p>\n");
-
-message += F("<p>Button 1: <span id='button1'>"); // example how to show values on the webserver
-message += digitalRead(BUTTON1_PIN);
-message += F("</span></p>\n");
-
-message += F("<p>Output 1: <span id='output1'>"); // example 3
-message += digitalRead(OUTPUT1_PIN);
-message += F("</span></p>\n");
-
-message += F("<p>Output 2: <span id='output2'>"); // example 4
-message += digitalRead(OUTPUT2_PIN);
-message += F("</span></p>\n"
-"</article>\n");
-
-message += F("<article>\n"
-"<h2>Switch</h2>\n" // example how to switch/toggle an output
-"<p>Example how to switch/toggle outputs, or to initiate actions. "
-"The buttons are 'fake' buttons and only styled by CSS. Click to toggle the output.</p>\n"
-"<p class='off'><a href='c.php?toggle=1' target='i'>Output 1</a></p>\n"
-"<p class='off'><a href='c.php?toggle=2' target='i'>Output 2</a></p>\n"
-"<iframe name='i' style='display:none' ></iframe>\n" // hack to keep the button press in the window
-"</article>\n");
-
-addBottom(message);
-server.send(200, "text/html", message);
-}
-
-// *** Page 1 ***  1.htm
-void handlePage1()
-{
   String message;
   addTop(message);
 
+  message += F("<article>"
+               "<h2>Wasserstand Zehentner Teisendorf</h2>"                                                   // here you write your html code for your homepage. Let's give some examples...
+               "<p>Hier kann man den aktuellen Wasserstand in der Regenwasser-Zisterne  "
+               "von Georg Zehentner, Streiblweg 19, Teisendorf ablesen.<br> "
+               " Bei Überschreiten des Höchststand muss eine Pumpe aktiviert werden</p>\n"
+               "</article>\n");
+
   message += F("<article>\n"
-               "<h2>Page 1</h2>\n"
-               "<p>This is example content for [Page 1]<p>\n"
-               "</article>\n"
+               "<h2>Rohdaten</h2>\n");
+  
+  // input signals are low active
+  message += F("Level Alarm   high: <span id='val_AHH'>");  if (val_AHH==0 ) {message += F("active");} else {message += F("--");} message += F("</span><br>");
+  message += F("Level Warning high: <span id='val_AH' >");  if (val_AH ==0 ) {message += F("active");} else {message += F("--");} message += F("</span><br>");
+  message += F("Level Warning low:  <span id='val_AL' >");  if (val_AL ==0 ) {message += F("active");} else {message += F("--");} message += F("</span><br>");
+  message += F("Level Alarm   low:  <span id='val_ALL'>");  if (val_ALL==0 ) {message += F("active");} else {message += F("--");} message += F("</span><br>");
+  message += F("</article>\n");
 
-               "<article>\n"
-               "<h2>\"Mobile First\"</h2>\n"
-               "<p>\"Mobile First\" means that the pages are optimized for smartphones. "
-               "The content width is narrow. Each time you start a new article session, a box will be generated. "
-               "This box will float: on smartphones in portrait mode they will be aligned vertically, "
-               "on monitors in landscape mode, the article boxes will be aligned horizontally. "
-               "If you don't like this effect, you have to adopt the stylesheet (f.css)."
-               "</p>\n"
-               "</article>\n"
+  message += F("<article>\n"
+               "<h2>Auswertung Wasserstand</h2>\n");
+  if ((val_AHH == 0 ) && (val_AH == 0)) {
+    message += F("<message_err> Achtung Hochwasser -- Pumpe einschalten <br>Wasserstand > ");message += Level_AHH;message += F("<br></message_err>");
+  } else if  (val_AH == 0) {
+    message += F("<message_warn> Wasserstand ist zwischen "); message += Level_AH;  message += F(" und ");  message += Level_AHH; message += F( "<br></message_warn>");
+  } else if (val_AL == 1) {
+    message += F("<message_ok> Wasserstand ist zwischen "); message += Level_AL;  message += F(" und ");  message += Level_AH;  message += F( "<br></message_ok>");
+  } else if ((val_AL == 0) && (val_ALL == 1)) {
+    message += F("<message_ok> Wasserstand ist zwischen "); message += Level_ALL; message += F(" und ");  message += Level_AL;  message += F( "<br></message_ok>");
+  } else if ((val_ALL == 0)) {
+    message += F("<message_ok>   Wasserstand < ");message += Level_ALL;message += F("<br></message_ok>");
+  }
+  message += F("</article>\n");
 
-               "<article>\n"
-               "<h2>Lorem ipsum</h2>\n"
-               "<p>Lorem ipsum dolor sit amet, consectetur adipisici elit, "
-               "sed eiusmod tempor incidunt ut labore et dolore magna aliqua. "
-               "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris "
-               " nisi ut aliquid ex ea commodi consequat. "
-               "Quis aute iure reprehenderit in voluptate velit esse cillum dolore "
-               "eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat "
-               "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. "
-               "</p>\n"
-               "</article>\n"
-              );
   addBottom(message);
   server.send(200, "text/html", message);
 }
 
 
-// *** Page 2 ***  2.htm
-void handlePage2()
-{
-  String message;
-  addTop(message);
 
-  message += F("<article>\n"
-               "<h2>The webclient</h2>\n"
-               "<p>Some words about the weblient ('client'): The client will send data to a server.<p>\n"
-               "<p>To be precise, the client on this module will send each ");
-  message += clientIntervall;
-  message += F(" seconds to a resource at<br>");
-  message += sendHttpTo;
-  message += F("<br>which you can set up in the configuration part. It consists of the webserver adress and a page. You must ensure, that the webserver and the called page is available, otherwise the request will fail.<p>\n"
-               "<p>Optionally you can send a command to force the webclient to send manually</p>\n"
-               "<p><a href='c.php?CMD=CLIENT' target='i' class='on'>Send now</a></p>\n"
-               "<iframe name='i' style='display:none' ></iframe>\n"
-               "<p>If the other webserver shares the same source code like this module - it should be able to collect the data from this module.</p>\n"
-               "</article>\n"
-              );
-  addBottom(message);
-  server.send(200, "text/html", message);
-}
-
-
-/*=============================================================*/
 void handleCss()
 {
   // output of stylesheet
@@ -258,128 +172,76 @@ void handleCss()
               "a{text-decoration:none;color:dimgray;text-align:center}\n"
               "main{text-align:center}\n"
               "article{vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:#E5E5E5;width:20em;text-align:left}\n" // if you don't like the floating effect (vor portrait mode on smartphones!) - remove display:inline-block
-              "article_wide{vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:#E5E5E5;width:40em;text-align:left}\n" // if you don't like the floating effect (vor portrait mode on smartphones!) - remove display:inline-block
-              "article_center{vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:#E5E5E5;width:20em;text-align:center}\n" // if you don't like the floating effect (vor portrait mode on smartphones!) - remove display:inline-block
               "article h2{margin-top:0;padding-bottom:1px}\n"
               "section {margin-bottom:0.2em;clear:both;}\n"
               "table{border-collapse:separate;border-spacing:0 0.2em}\n"
               "th, td{background-color:#C0C0C0}\n"
               "button{margin-top:0.3em}\n"
-              "footer p{font-size:1.0em;color:dimgray;background:silver;text-align:center;margin-bottom:5px}\n"
+              "footer p{font-size:0.7em;color:dimgray;background:silver;text-align:center;margin-bottom:5px}\n"
               "nav{background-color:silver;margin:1px;padding:5px;font-size:0.8em}\n"
               "nav a{color:dimgrey;padding:10px;text-decoration:none}\n"
               "nav a:hover{text-decoration:underline}\n"
               "nav p{margin:0px;padding:0px}\n"
               ".on, .off{margin-top:0;margin-bottom:0.2em;margin-left:4em;font-size:1.4em;background-color:#C0C0C0;border-style:solid;border-radius:10px;border-style:outset;width:5em;height:1.5em;text-decoration:none;text-align:center}\n"
               ".on{border-color:green}\n"
-              ".off{border-color:red}\n");
+              ".off{border-color:red}\n"
+              "message_ok  {color:white;vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:green ;width:19em;text-align:center}\n" 
+              "message_warn{color:white;vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:orange;width:19em;text-align:center}\n" 
+              "message_err {color:white;vertical-align:top;display:inline-block;margin:0.2em;padding:0.1em;border-style:solid;border-color:#C0C0C0;background-color:red   ;width:19em;text-align:center}\n" 
+              );
   server.send(200, "text/css", message);
 }
 
+void handleJson() {
+  // Output: send data to browser as JSON
+  // after modification always check if JSON is still valid. Just call the JSON (json) in your webbrowser and check.
+  Serial.println(F("D268 requested json"));
+  String message = "";
+  message = (F("{\"ss\":"));                     // Start of JSON and the first object "ss":
+  message += millis() / 1000;
+  message += (F(",\"val_AHH\":"));
+  message += digitalRead(GPin_AHH);
+  message += (F(",\"val_AH\":"));
+  message += digitalRead(GPin_AH);
+  message += (F(",\"val_AL\":"));
+  message += digitalRead(GPin_AL);
+  message += (F(",\"val_ALL\":"));
+  message += digitalRead(GPin_ALL);
+  message += (F("}"));                           // End of JSON
+  server.send(200, "application/json", message); // set MIME type https://www.ietf.org/rfc/rfc4627.txt
+}
+
+
 void handleJs() {
   // Output: a fetch API / JavaScript
-  
+  // a function in the JavaScript uses fetch API to request a JSON file from the webserver and updates the values on the page if the object names and ID are the same
   String message;
   message += F("const url ='json';\n"
                "function renew(){\n"
-               " document.getElementById('sec').style.color = 'blue'\n"   
+               " document.getElementById('sec').style.color = 'blue'\n"                                              // if the timer starts the request, the second gets blue
                " fetch(url)\n" // Call the fetch function passing the url of the API as a parameter
                " .then(response => {return response.json();})\n"
                " .then(jo => {\n"
-               "   document.getElementById('sec').innerHTML = Math.floor(jo['ss'] % 60); \n"     
+               "   document.getElementById('sec').innerHTML = Math.floor(jo['ss'] % 60);\n"                         // example how to change a value in the HTML page
                "   for (var i in jo)\n"
-               "    {if (document.getElementById(i)) document.getElementById(i).innerHTML = jo[i];}\n"    
+               "    {if (document.getElementById(i)) document.getElementById(i).innerHTML = jo[i];}\n"               // as long as the JSON name fits to the HTML id, the value will be replaced
                // add other fields here (e.g. the delivered JSON name doesn't fit to the html id
                // finally, update the runtime
                "   if (jo['ss'] > 60) { document.getElementById('min').innerHTML = Math.floor(jo['ss'] / 60 % 60);}\n"
                "   if (jo['ss'] > 3600) {document.getElementById('hour').innerHTML = Math.floor(jo['ss'] / 3600 % 24);}\n"
                "   if (jo['ss'] > 86400) {document.getElementById('day').innerHTML = Math.floor(jo['ss'] / 86400 % 7);}\n"
                "   if (jo['ss'] > 604800) {document.getElementById('week').innerHTML = Math.floor(jo['ss'] / 604800 % 52);}\n"
-               "   document.getElementById('sec').style.color = 'dimgray';\n"  
+               "   document.getElementById('sec').style.color = 'dimgray';\n"  // if everything was ok, the second will be grey again.
                " })\n"
-               " .catch(function() {\n"            
+               " .catch(function() {\n"                                        // this is where you run code if the server returns any errors
                "  document.getElementById('sec').style.color = 'red';\n"
                " });\n"
                "}\n"
                "document.addEventListener('DOMContentLoaded', renew, setInterval(renew, ");
   message += ajaxIntervall * 1000;
   message += F("));");
-              
+
   server.send(200, "text/javascript", message);
 }
 
-void handleJson()
-{
-  // Output: send data to browser as JSON
 
-  String message = "";
-  message = (F("{\"ss\":")); // Start of JSON and the first object "ss":
-  message += millis() / 1000;
-  message += (F(",\"internalVcc\":"));
-  message += ESP.getVcc();
-  message += (F(",\"button1\":"));
-  message += digitalRead(BUTTON1_PIN);
-  message += (F(",\"output1\":"));
-  message += digitalRead(OUTPUT1_PIN);
-  message += (F(",\"output2\":"));
-  message += digitalRead(OUTPUT2_PIN);
-  message += (F("}")); // End of JSON
-  server.send(200, "application/json", message);
-}
-
-void handleCommand()
-{
-  // receive command and handle accordingly
-  Serial.println(F("D223 handleCommand"));
-  for (uint8_t i = 0; i < server.args(); i++)
-  {
-    Serial.print(server.argName(i));
-    Serial.print(F(": "));
-    Serial.println(server.arg(i));
-  }
-  if (server.argName(0) == "toggle") // the parameter which was sent to this server
-  {
-    if (server.arg(0) == "1") // the value for that parameter
-    {
-      Serial.println(F("D232 toggle output1"));
-      if (digitalRead(OUTPUT1_PIN))
-      { // toggle: if the pin was on - switch it of and vice versa
-        digitalWrite(OUTPUT1_PIN, LOW);
-      }
-      else
-      {
-        digitalWrite(OUTPUT1_PIN, HIGH);
-      }
-    }
-    if (server.arg(0) == "2") // the value for that parameter
-    {
-      Serial.println(F("D232 toggle output2"));
-      if (digitalRead(OUTPUT2_PIN))
-      {
-        digitalWrite(OUTPUT2_PIN, LOW);
-      }
-      else
-      {
-        digitalWrite(OUTPUT2_PIN, HIGH);
-      }
-    }
-    if (server.arg(0) == "3") // the value for that parameter(led))
-    {
-      Serial.println(F("D232 toggle LED"));
-      if (digitalRead(led))
-      { // toggle: if the pin was on - switch it of and vice versa
-        digitalWrite(led, LOW);
-      }
-      else
-      {
-        digitalWrite(led, HIGH);
-      }
-    }
-  }
-  else if (server.argName(0) == "CMD" && server.arg(0) == "RESET") // Example how to reset the module. Just send ?CMD=RESET
-  {
-    Serial.println(F("D238 will reset"));
-    ESP.restart();
-  }
-  server.send(204, "text/plain", "No Content"); // this page doesn't send back content --> 204
-}
