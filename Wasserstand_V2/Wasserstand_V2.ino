@@ -34,6 +34,17 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
    Version
    2021-07-21 (compiles with ESP8266 core 2.7.4 without warnings)
 ***************************************************************** */
+/*
+  Rui Santos
+  Complete project details at https://RandomNerdTutorials.com/esp8266-nodemcu-date-time-ntp-client-server-arduino/
+  
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files.
+  
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+*/
+
 
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -41,6 +52,9 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 #include <ESP8266HTTPClient.h>                             // for the webclient https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266HTTPClient
 #include <ESP8266mDNS.h>                                   // Bonjour/multicast DNS, finds the device on network by name
 #include <ArduinoOTA.h>                                    // OTA Upload via ArduinoIDE
+
+#include <NTPClient.h>                                      // get time from timeserver
+#include <WiFiUdp.h>
 
 //#include <credentials.h>                                   // my credentials - remove before upload
 
@@ -104,6 +118,24 @@ int incomingByte = 0; // for incoming serial data
 #define Level_AL  180     
 #define Level_ALL 145     // Unterkante KG Rohr
                          // Aktueller Niedrig-Stand Nov 2023 = 105cm
+
+/*========================================*/
+/*   Variables to connect to timeserver   */
+// Define NTP Client to get time
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+String currentDate;   // hold the current date
+String formattedTime; // hold the current time
+
+//Week Days
+String weekDays[7]={"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+//Month names
+String months[12]={"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+
+/* End Timeserver */
 
 ESP8266WebServer server(80);                     // an instance for the webserver
 
@@ -181,6 +213,16 @@ void setup(void) {
   //IDE OTA
   ArduinoOTA.setHostname(myhostname);            // give a name to your ESP for the Arduino IDE
   ArduinoOTA.begin();                            // OTA Upload via ArduinoIDE https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html
+
+  // Initialize a NTPClient to get time
+  timeClient.begin();
+  // Set offset time in seconds to adjust for your timezone, for example:
+  // GMT +1 = 3600
+  // GMT +8 = 28800
+  // GMT -1 = -3600
+  // GMT 0 = 0
+  timeClient.setTimeOffset(3600);
+
 }
 
 /* *******************************************************************
@@ -207,6 +249,41 @@ void loop(void) {
   // Serial.println(val_AL );
   // Serial.println(val_ALL);
 
-  //delay(1000);
+  
+  /*=======================================*/
+  /*  code for getting time from NTP       */
+  timeClient.update();
 
+  time_t epochTime = timeClient.getEpochTime();
+  Serial.print("Epoch Time: ");
+  Serial.println(epochTime);
+  
+  formattedTime = timeClient.getFormattedTime();
+  Serial.print("Formatted Time: ");
+  Serial.println(formattedTime);  
+
+  //Get a time structure
+  struct tm *ptm = gmtime ((time_t *)&epochTime); 
+
+  int monthDay = ptm->tm_mday;
+  Serial.print("Month day: ");
+  Serial.println(monthDay);
+
+  int currentMonth = ptm->tm_mon+1;
+  Serial.print("Month: ");
+  Serial.println(currentMonth);
+
+  int currentYear = ptm->tm_year+1900;
+  Serial.print("Year: ");
+  Serial.println(currentYear);
+
+  //Print complete date:
+  currentDate = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay);
+  Serial.print("Current date: ");
+  Serial.println(currentDate);
+
+  Serial.println("");
+/* End getting time and date */
+
+  delay(2000);
 }
