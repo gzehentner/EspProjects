@@ -2,10 +2,16 @@
 =============================================
 Wasserstand_V2
 
+including following features:
 - Wasserstand abfragen anhand von vier Relais Ausgängen
 - Aktiven Bereich anzeigen
 - Hintergrundfarbe abhängig von Warn- oder Alarmlevel
 - Info auf WebSeite anzeigen
+
+known issues: 
+- actual date/time is not refreshed automatically
+
+new features:
 - Info auf AskSensors weiterleiten (hier soll eine Info-Mail generiert werden bei Überschreiben des Alarmlevel)
 - Evtl. als neues Feature: Info-Mail
 
@@ -58,7 +64,7 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 
 //#include <credentials.h>                                   // my credentials - remove before upload
 
-#define VERSION "2.0"                                    // the version of this sketch
+#define VERSION "2.1"                                    // the version of this sketch
                                                            
 /* *******************************************************************
          the board settings / die Einstellungen der verschiedenen Boards
@@ -92,8 +98,8 @@ unsigned long ss = 0;                            // current second since startup
 const uint16_t ajaxIntervall = 5;                // intervall for AJAX or fetch API call of website in seconds
 uint32_t clientPreviousSs = 0 - clientIntervall; // last second when data was sent to server
 
-/* ----Prepare WaterLevel ------------------------------------------ */
-// #define Sim_Relais
+/*=================================================================*/
+/* Prepare WaterLevel Application */
 
 /* -- Pin-Def -- */
 #define GPin_AHH 3
@@ -119,9 +125,9 @@ int incomingByte = 0; // for incoming serial data
 #define Level_ALL 145     // Unterkante KG Rohr
                          // Aktueller Niedrig-Stand Nov 2023 = 105cm
 
-/*========================================*/
-/*   Variables to connect to timeserver   */
-// Define NTP Client to get time
+/*=================================================================*/
+/* Variables to connect to timeserver   */
+/* Define NTP Client to get time */
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
@@ -137,6 +143,8 @@ String months[12]={"January", "February", "March", "April", "May", "June", "July
 
 /* End Timeserver */
 
+/*=================================================================*/
+
 ESP8266WebServer server(80);                     // an instance for the webserver
 
 #ifndef CSS_MAINCOLOR
@@ -150,6 +158,8 @@ ESP8266WebServer server(80);                     // an instance for the webserve
 
 void setup(void) {
 
+/*=================================================================*/
+/* setup serial  and connect to WLAN */
   Serial.begin(9600);
   Serial.println(F("\n" TXT_BOARDNAME "\nVersion: " VERSION " Board " TXT_BOARDID " "));
   Serial.print  (__DATE__);
@@ -174,7 +184,8 @@ void setup(void) {
     Serial.println(F("MDNS responder started"));
   }
 
-  /* ----Setup WaterLevel ------------------------------------------ */
+  /* Prepare WaterLevel Application */
+  
   // prepare relais input / output
   
   pinMode(GPin_AHH , INPUT_PULLUP);
@@ -186,7 +197,11 @@ void setup(void) {
   digitalWrite(GPout_GND, 0);
 
   /* ----End Setup WaterLevel ------------------------------------------ */
+/*=================================================================*/
 
+
+/*=================================================================*/
+/* Setup WebServer and start*/
 
   //define the pages and other content for the webserver
   server.on("/",      handlePage);               // send root page
@@ -210,11 +225,14 @@ void setup(void) {
   server.begin();                                // start the webserver
   Serial.println(F("HTTP server started"));
 
-  //IDE OTA
+  /*=================================================================*/
+  /* IDE OTA */
   ArduinoOTA.setHostname(myhostname);            // give a name to your ESP for the Arduino IDE
   ArduinoOTA.begin();                            // OTA Upload via ArduinoIDE https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html
 
-  // Initialize a NTPClient to get time
+  /*=================================================================*/
+  /* Initialize a NTPClient to get time */
+
   timeClient.begin();
   // Set offset time in seconds to adjust for your timezone, for example:
   // GMT +1 = 3600
@@ -230,6 +248,10 @@ void setup(void) {
  ********************************************************************/
 
 void loop(void) {
+
+  /*=================================================================*/
+  /* WebClient (not used yet)*/
+
   ss = millis() / 1000;
   if (clientIntervall > 0 && (ss - clientPreviousSs) >= clientIntervall)
   {
@@ -237,20 +259,20 @@ void loop(void) {
     clientPreviousSs = ss;
   }
   server.handleClient();
+
+  /*=================================================================*/
+  /* Over the Air UPdate */
   ArduinoOTA.handle();       // OTA Upload via ArduinoIDE
 
+  /*=================================================================*/
+  /* Read in relais status */
   val_AHH = digitalRead(GPin_AHH);
   val_AH  = digitalRead(GPin_AH);
   val_AL  = digitalRead(GPin_AL);
   val_ALL = digitalRead(GPin_ALL);
 
-  // Serial.println(val_AHH);
-  // Serial.println(val_AH );
-  // Serial.println(val_AL );
-  // Serial.println(val_ALL);
-
   
-  /*=======================================*/
+  /*=================================================================*/
   /*  code for getting time from NTP       */
   timeClient.update();
 
@@ -285,5 +307,4 @@ void loop(void) {
   Serial.println("");
 /* End getting time and date */
 
-  delay(2000);
 }
