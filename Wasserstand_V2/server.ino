@@ -70,9 +70,12 @@ void addTop(String &message)
                "<script src='j.js'></script>\n"
                "</head>\n");
   message += F("<body>\n");
-  //message += F("<body onload='GetSwitchState(0)'>\n");  // if you are using AJAX/XMLHttpRequest you have to add the onload request
   message += F("<header>\n<h1>" TXT_BOARDNAME " - Board " TXT_BOARDID "</h1>\n"
-               "<nav><p><a href=\"/\">[Home]</a> <a href=\"2.htm\">[The&nbsp;Webclient]</a> </p></nav>\n</header>\n"
+               "<nav><p>Actual Date and Time: "); 
+  message += currentDate;
+  message += F(" -- " ); 
+  message += formattedTime; 
+  message += F("         <a href=\"/\">[Home]</a> <a href=\"2.htm\">[The&nbsp;Webclient]</a> </p></nav>\n</header>\n"
                "<main>\n");
 }
 
