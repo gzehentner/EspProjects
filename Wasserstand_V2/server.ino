@@ -32,7 +32,9 @@ void handleOtherPage()
 }
 */
 
+/* =======================================*/
 void handleNotFound() {
+/* =======================================*/
   // Output a "404 not found" page. It includes the parameters which comes handy for test purposes.
   Serial.println(F("D015 handleNotFound()"));
   String message;
@@ -52,13 +54,18 @@ void handleNotFound() {
 }
 
 
+/* =======================================*/
 void handle204()
+/* =======================================*/
 {  
   server.send(204);                // this page doesn't send back content
 }
 
 
+/* =======================================*/
+/* add a header  to each page including refs for all other pages */
 void addTop(String &message)
+/* =======================================*/
 {
   message =  F("<!DOCTYPE html>\n"
                "<html lang='en'>\n"
@@ -70,19 +77,27 @@ void addTop(String &message)
                "<script src='j.js'></script>\n"
                "</head>\n");
   message += F("<body>\n");
-  message += F("<header>\n<h1>" TXT_BOARDNAME " - Board " TXT_BOARDID "</h1>\n"
-               "<nav><p>Actual Date and Time: "); 
-  message += currentDate;
-  message += F(" -- " ); 
-  message += formattedTime; 
-  message += F("         <a href=\"/\">[Home]</a> <a href=\"2.htm\">[The&nbsp;Webclient]</a> </p></nav>\n</header>\n"
+  message += F("<header>\n<h1>" TXT_BOARDNAME " - Board " TXT_BOARDID "</h1>\n");
+  message += F("<nav> <a href=\"/\">[Home]</a> <a href=\"2.htm\">[The&nbsp;Webclient]</a> </p></nav>\n</header>\n"
                "<main>\n");
 }
 
 
+/* =======================================*/
+/* The footer will display the uptime, the IP-address the version of the sketch and the compile date/time */
+/* add code to calculate the uptime */
 void addBottom(String &message) {
+/* =======================================*/
+
   message += F("</main>\n"
-               "<footer>\n<p>");                 // The footer will display the uptime, the IP the version of the sketch and the compile date/time
+               "<footer>\n<p>");           
+  message += F("<p>Actual Date and Time: "); 
+
+  message += currentDate;
+  message += F(" -- " ); 
+  message += formattedTime; 
+  message += F("<br>" ); 
+
   if (ss > 604800)
   {
     message += F("<span id='week'>");
@@ -118,7 +133,13 @@ void addBottom(String &message) {
 // the html output
 // finally check your output if it is valid html: https://validator.w3.org
 // *** HOME ***  0.htm
+/* =======================================*/
+/* main page of this application:
+ *   - display water level as raw data
+ *   - diaplay actual warn or alarm satus
+ */
 void handlePage()
+/* =======================================*/
 {
   String message;
   addTop(message);
@@ -161,7 +182,9 @@ void handlePage()
 
 
 
+/* =======================================*/
 void handleCss()
+/* =======================================*/
 {
   // output of stylesheet
   // this is a straight forward example how to generat a static page from program memory
@@ -180,7 +203,7 @@ void handleCss()
               "table{border-collapse:separate;border-spacing:0 0.2em}\n"
               "th, td{background-color:#C0C0C0}\n"
               "button{margin-top:0.3em}\n"
-              "footer p{font-size:0.7em;color:dimgray;background:silver;text-align:center;margin-bottom:5px}\n"
+              "footer p{font-size:0.8em;color:dimgray;background:silver;text-align:center;margin-bottom:5px}\n"
               "nav{background-color:silver;margin:1px;padding:5px;font-size:0.8em}\n"
               "nav a{color:dimgrey;padding:10px;text-decoration:none}\n"
               "nav a:hover{text-decoration:underline}\n"
@@ -195,9 +218,11 @@ void handleCss()
   server.send(200, "text/css", message);
 }
 
-void handleJson() {
+/* =======================================*/
   // Output: send data to browser as JSON
   // after modification always check if JSON is still valid. Just call the JSON (json) in your webbrowser and check.
+void handleJson() {
+/* =======================================*/
   Serial.println(F("D268 requested json"));
   String message = "";
   message = (F("{\"ss\":"));                     // Start of JSON and the first object "ss":
@@ -215,9 +240,11 @@ void handleJson() {
 }
 
 
-void handleJs() {
+/* =======================================*/
   // Output: a fetch API / JavaScript
   // a function in the JavaScript uses fetch API to request a JSON file from the webserver and updates the values on the page if the object names and ID are the same
+void handleJs() {
+/* =======================================*/
   String message;
   message += F("const url ='json';\n"
                "function renew(){\n"
