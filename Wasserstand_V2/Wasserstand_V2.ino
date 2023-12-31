@@ -50,7 +50,20 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
   The above copyright notice and this permission notice shall be included in all
   copies or substantial portions of the Software.
 */
+/**
+ * Send_Text-Example shows, how to send a text E-Mail
+ * Created by K. Suwatchai (Mobizt)
+ *
+ * Email: suwatchai@outlook.com
+ *
+ * Github: https://github.com/mobizt/ESP-Mail-Client
+ *
+ * Copyright (c) 2023 mobizt
+ */
 
+// for Send-Mail
+#include <Arduino.h>
+#include <ESP_Mail_Client.h>
 
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -65,6 +78,9 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 //#include <credentials.h>                                   // my credentials - remove before upload
 
 #define VERSION "2.1"                                    // the version of this sketch
+
+// enable debugging of NTP time management
+// #define DEBUG_TIME
                                                            
 /* *******************************************************************
          the board settings / die Einstellungen der verschiedenen Boards
@@ -76,6 +92,30 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 const uint16_t clientIntervall = 0;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
 const char* sendHttpTo = "http://192.168.178.153/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
 
+/* ============================================================= */
+/* Definition for Send-Mail                                      */
+
+/* settings for GMAIL */
+#define SMTP_HOST "smtp.gmail.com"
+#define SMTP_PORT esp_mail_smtp_port_587 // port 465 is not available for Outlook.com
+
+/* The log in credentials */
+#define AUTHOR_NAME     "Pegelstand Zehentner"
+#define AUTHOR_EMAIL    "georgzehentneresp@gmail.com"
+#define AUTHOR_PASSWORD "lwecoyvlkmordnly"
+
+/* Recipient email address */
+#define RECIPIENT_EMAIL "gzehentner@web.de"
+
+/* Declare the global used SMTPSession object for SMTP transport */
+SMTPSession smtp;
+
+/* Callback function to get the Email sending status */
+void smtpCallback(SMTP_Status status);
+
+// const char rootCACert[] PROGMEM = "-----BEGIN CERTIFICATE-----\n"
+//                                   "-----END CERTIFICATE-----\n";
+/* ============================================================= */
 
 
 /* *******************************************************************
@@ -166,6 +206,7 @@ void setup(void) {
   Serial.print  (F(" "));
   Serial.println(__TIME__);
 
+  // Connect to WIFI
   char myhostname[8] = {"esp"};
   strcat(myhostname, TXT_BOARDID);
   WiFi.hostname(myhostname);
@@ -241,6 +282,11 @@ void setup(void) {
   // GMT 0 = 0
   timeClient.setTimeOffset(3600);
 
+  // call function for setup SendMail
+  // till now the mail is sent in the same procedure; this has to be changed later
+  // GZE ToDo
+  setupSendMail();
+
 }
 
 /* *******************************************************************
@@ -277,34 +323,41 @@ void loop(void) {
   timeClient.update();
 
   time_t epochTime = timeClient.getEpochTime();
-  Serial.print("Epoch Time: ");
-  Serial.println(epochTime);
-  
+
   formattedTime = timeClient.getFormattedTime();
-  Serial.print("Formatted Time: ");
-  Serial.println(formattedTime);  
 
   //Get a time structure
   struct tm *ptm = gmtime ((time_t *)&epochTime); 
 
   int monthDay = ptm->tm_mday;
-  Serial.print("Month day: ");
-  Serial.println(monthDay);
-
   int currentMonth = ptm->tm_mon+1;
-  Serial.print("Month: ");
-  Serial.println(currentMonth);
-
   int currentYear = ptm->tm_year+1900;
-  Serial.print("Year: ");
-  Serial.println(currentYear);
 
   //Print complete date:
   currentDate = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay);
-  Serial.print("Current date: ");
-  Serial.println(currentDate);
+  #ifdef DEBUG_TIME
+    Serial.print("Formatted Time: ");
+    Serial.println(formattedTime);  
 
-  Serial.println("");
+    Serial.print("Month day: ");
+    Serial.println(monthDay);
+    
+    Serial.print("Month: ");
+    Serial.println(currentMonth);
+    
+    Serial.print("Year: ");
+    Serial.println(currentYear);
+
+    Serial.print("Epoch Time: ");
+    Serial.println(epochTime);
+
+    Serial.print("Current date: ");
+    Serial.println(currentDate);
+
+    Serial.println("");
+
+    delay(1000);
+
+  #endif
 /* End getting time and date */
-
 }
