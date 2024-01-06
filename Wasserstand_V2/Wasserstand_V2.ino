@@ -7,13 +7,15 @@ including following features:
 - Aktiven Bereich anzeigen
 - Hintergrundfarbe abhängig von Warn- oder Alarmlevel
 - Info auf WebSeite anzeigen
+- Beim Wechsel auf einen gefährlichen Zustand und zurück werden Info Mails (Text-Mail) gesendet
 
 known issues: 
-- actual date/time is not refreshed automatically
+- actual date/time is actually not evaluated to avoid crash when sending email --> this has to be fixed next (unset debug_crash to reactivate)
 
-new features:
-- Info auf AskSensors weiterleiten (hier soll eine Info-Mail generiert werden bei Überschreiben des Alarmlevel)
-- Evtl. als neues Feature: Info-Mail
+new features comming soon:
+- Umstellung auf HTML Mail
+  - Farbe soll ins Spiel kommen
+  - Hyperlink auf die Hauptseite
 
 Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 
@@ -67,41 +69,43 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include <ESP8266WebServer.h>                              // for the webserver
-#include <ESP8266HTTPClient.h>                             // for the webclient https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266HTTPClient
-#include <ESP8266mDNS.h>                                   // Bonjour/multicast DNS, finds the device on network by name
-#include <ArduinoOTA.h>                                    // OTA Upload via ArduinoIDE
+#include <ESP8266WebServer.h>   // for the webserver
+#include <ESP8266HTTPClient.h>  // for the webclient https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266HTTPClient
+#include <ESP8266mDNS.h>        // Bonjour/multicast DNS, finds the device on network by name
+#include <ArduinoOTA.h>         // OTA Upload via ArduinoIDE
 
-#include <NTPClient.h>                                      // get time from timeserver
+#include <NTPClient.h>  // get time from timeserver
 #include <WiFiUdp.h>
 
 //#include <credentials.h>                                   // my credentials - remove before upload
 
-#define VERSION "2.1"                                    // the version of this sketch
+#define VERSION "2.2"  // the version of this sketch
+
+#define debug_crash
 
 // enable debugging of NTP time management
 // #define DEBUG_TIME
-                                                           
+
 /* *******************************************************************
          the board settings / die Einstellungen der verschiedenen Boards
  ********************************************************************/
 
-#define TXT_BOARDID "164"                                  // an ID for the board
-#define TXT_BOARDNAME "Wasserstand-Messung"                // the name of the board
-#define CSS_MAINCOLOR "blue"                               // don't get confused by the different webservers and use different colors
-const uint16_t clientIntervall = 0;                        // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
-const char* sendHttpTo = "http://192.168.178.153/d.php";     // the module will send information to that server/resource. Use an URI or an IP address
+#define TXT_BOARDID "164"                                 // an ID for the board
+#define TXT_BOARDNAME "Wasserstand-Messung"               // the name of the board
+#define CSS_MAINCOLOR "blue"                              // don't get confused by the different webservers and use different colors
+const uint16_t clientIntervall = 0;                       // intervall to send data to a server in seconds. Set to 0 if you don't want to send data
+const char* sendHttpTo = "http://192.168.178.153/d.php";  // the module will send information to that server/resource. Use an URI or an IP address
 
 /* ============================================================= */
 /* Definition for Send-Mail                                      */
 
 /* settings for GMAIL */
 #define SMTP_HOST "smtp.gmail.com"
-#define SMTP_PORT esp_mail_smtp_port_587 // port 465 is not available for Outlook.com
+#define SMTP_PORT esp_mail_smtp_port_587  // port 465 is not available for Outlook.com
 
 /* The log in credentials */
-#define AUTHOR_NAME     "Pegelstand Zehentner"
-#define AUTHOR_EMAIL    "georgzehentneresp@gmail.com"
+#define AUTHOR_NAME "Pegelstand Zehentner"
+#define AUTHOR_EMAIL "georgzehentneresp@gmail.com"
 #define AUTHOR_PASSWORD "lwecoyvlkmordnly"
 
 /* Recipient email address */
@@ -122,9 +126,9 @@ void smtpCallback(SMTP_Status status);
          other settings / weitere Einstellungen für den Anwender
  ********************************************************************/
 
-#ifndef STASSID                        // either use an external .h file containing STASSID and STAPSK or ...
-#define STASSID "Zehentner"            // ... modify these line to your SSID
-#define STAPSK  "ElisabethScho"        // ... and set your WIFI password
+#ifndef STASSID                 // either use an external .h file containing STASSID and STAPSK or ...
+#define STASSID "Zehentner"     // ... modify these line to your SSID
+#define STAPSK "ElisabethScho"  // ... and set your WIFI password
 #endif
 
 const char* ssid = STASSID;
@@ -134,61 +138,69 @@ const char* password = STAPSK;
          Globals - Variables and constants
  ********************************************************************/
 
-unsigned long ss = 0;                            // current second since startup
-const uint16_t ajaxIntervall = 5;                // intervall for AJAX or fetch API call of website in seconds
-uint32_t clientPreviousSs = 0 - clientIntervall; // last second when data was sent to server
+unsigned long ss = 0;                             // current second since startup
+unsigned long ss_last = 0;                        // value of ss out of the last loop run
+const uint16_t ajaxIntervall = 5;                 // intervall for AJAX or fetch API call of website in seconds
+uint32_t clientPreviousSs = 0 - clientIntervall;  // last second when data was sent to server
 
 /*=================================================================*/
 /* Prepare WaterLevel Application */
 
 /* -- Pin-Def -- */
 #define GPin_AHH 3
-#define GPin_AH  5
-#define GPin_AL  4
+#define GPin_AH 5
+#define GPin_AL 4
 #define GPin_ALL 14
 #define GPout_GND 12
 
 #define Ain_Level 2
 
 int val_AHH;
-int val_AH ;
-int val_AL ;
+int val_AH;
+int val_AL;
 int val_ALL;
 
 int inByte = 0;
-int incomingByte = 0; // for incoming serial data
+int incomingByte = 0;  // for incoming serial data
 
 /* -- Alarm-Level -- */
-#define Level_AHH 190     // Oberkante Schacht = 197cm
-#define Level_AH  185     // Zwischenstand
-#define Level_AL  180     
-#define Level_ALL 145     // Unterkante KG Rohr
-                         // Aktueller Niedrig-Stand Nov 2023 = 105cm
+#define Level_AHH 190  // Oberkante Schacht = 197cm
+#define Level_AH 185   // Zwischenstand
+#define Level_AL 180
+#define Level_ALL 145  // Unterkante KG Rohr \
+                       // Aktueller Niedrig-Stand Nov 2023 = 105cm
+
+String alarmStateTxt[5] = { "Lowest", "Low", "Medium", "Warning", "Alarm" };
+int alarmState;     // shows the actual water level
+int alarmStateOld;  // previous value of alarmState
+bool executeSendMail = false;
 
 /*=================================================================*/
 /* Variables to connect to timeserver   */
 /* Define NTP Client to get time */
 
+#ifndef debug_crash
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
+#endif
 
-String currentDate;   // hold the current date
-String formattedTime; // hold the current time
+String currentDate;    // hold the current date
+String formattedTime;  // hold the current time
 
 //Week Days
-String weekDays[7]={"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+String weekDays[7] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
 
 //Month names
-String months[12]={"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+String months[12] = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
 
 /* End Timeserver */
 
 /*=================================================================*/
 
-ESP8266WebServer server(80);                     // an instance for the webserver
+ESP8266WebServer server(80);  // an instance for the webserver
 
 #ifndef CSS_MAINCOLOR
-#define CSS_MAINCOLOR "#8A0829"                  // fallback if no CSS_MAINCOLOR was declared for the board
+#define CSS_MAINCOLOR "#8A0829"  // fallback if no CSS_MAINCOLOR was declared for the board
 #endif
 
 
@@ -198,16 +210,16 @@ ESP8266WebServer server(80);                     // an instance for the webserve
 
 void setup(void) {
 
-/*=================================================================*/
-/* setup serial  and connect to WLAN */
+  /*=================================================================*/
+  /* setup serial  and connect to WLAN */
   Serial.begin(9600);
   Serial.println(F("\n" TXT_BOARDNAME "\nVersion: " VERSION " Board " TXT_BOARDID " "));
-  Serial.print  (__DATE__);
-  Serial.print  (F(" "));
+  Serial.print(__DATE__);
+  Serial.print(F(" "));
   Serial.println(__TIME__);
 
   // Connect to WIFI
-  char myhostname[8] = {"esp"};
+  char myhostname[8] = { "esp" };
   strcat(myhostname, TXT_BOARDID);
   WiFi.hostname(myhostname);
   WiFi.begin(ssid, password);
@@ -226,54 +238,55 @@ void setup(void) {
   }
 
   /* Prepare WaterLevel Application */
-  
+
   // prepare relais input / output
-  
-  pinMode(GPin_AHH , INPUT_PULLUP);
-  pinMode(GPin_AH  , INPUT_PULLUP);
-  pinMode(GPin_AL  , INPUT_PULLUP);
-  pinMode(GPin_ALL , INPUT_PULLUP);
+
+  pinMode(GPin_AHH, INPUT_PULLUP);
+  pinMode(GPin_AH, INPUT_PULLUP);
+  pinMode(GPin_AL, INPUT_PULLUP);
+  pinMode(GPin_ALL, INPUT_PULLUP);
   pinMode(GPout_GND, OUTPUT);
-  
+
   digitalWrite(GPout_GND, 0);
 
   /* ----End Setup WaterLevel ------------------------------------------ */
-/*=================================================================*/
+  /*=================================================================*/
 
 
-/*=================================================================*/
-/* Setup WebServer and start*/
+  /*=================================================================*/
+  /* Setup WebServer and start*/
 
   //define the pages and other content for the webserver
-  server.on("/",      handlePage);               // send root page
-  server.on("/0.htm", handlePage);               // a request can reuse another handler
-  // server.on("/1.htm", handlePage1);               
-  // server.on("/2.htm", handlePage2);               
+  server.on("/", handlePage);       // send root page
+  server.on("/0.htm", handlePage);  // a request can reuse another handler
+  // server.on("/1.htm", handlePage1);
+  // server.on("/2.htm", handlePage2);
   // server.on("/x.htm", handleOtherPage);          // just another page to explain my usage of HTML pages ...
-  
-  server.on("/f.css", handleCss);                // a stylesheet                                             
-  server.on("/j.js",  handleJs);                 // javscript based on fetch API to update the page
-  //server.on("/j.js",  handleAjax);             // a javascript to handle AJAX/JSON update of the page  https://werner.rothschopf.net/201809_arduino_esp8266_server_client_2_ajax.htm                                                
-  server.on("/json",  handleJson);               // send data in JSON format
-//  server.on("/c.php", handleCommand);            // process commands
-//  server.on("/favicon.ico", handle204);          // process commands
-  server.onNotFound(handleNotFound);             // show a typical HTTP Error 404 page
+
+  server.on("/f.css", handleCss);  // a stylesheet
+  server.on("/j.js", handleJs);    // javscript based on fetch API to update the page
+  //server.on("/j.js",  handleAjax);             // a javascript to handle AJAX/JSON update of the page  https://werner.rothschopf.net/201809_arduino_esp8266_server_client_2_ajax.htm
+  server.on("/json", handleJson);     // send data in JSON format
+                                      //  server.on("/c.php", handleCommand);            // process commands
+                                      //  server.on("/favicon.ico", handle204);          // process commands
+  server.onNotFound(handleNotFound);  // show a typical HTTP Error 404 page
 
   //the next two handlers are necessary to receive and show data from another module
   // server.on("/d.php", handleData);               // receives data from another module
   // server.on("/r.htm", handlePageR);              // show data as received from the remote module
 
-  server.begin();                                // start the webserver
+  server.begin();  // start the webserver
   Serial.println(F("HTTP server started"));
 
   /*=================================================================*/
   /* IDE OTA */
-  ArduinoOTA.setHostname(myhostname);            // give a name to your ESP for the Arduino IDE
-  ArduinoOTA.begin();                            // OTA Upload via ArduinoIDE https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html
+  ArduinoOTA.setHostname(myhostname);  // give a name to your ESP for the Arduino IDE
+  ArduinoOTA.begin();                  // OTA Upload via ArduinoIDE https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html
 
   /*=================================================================*/
   /* Initialize a NTPClient to get time */
 
+#ifndef debug_crash
   timeClient.begin();
   // Set offset time in seconds to adjust for your timezone, for example:
   // GMT +1 = 3600
@@ -281,12 +294,7 @@ void setup(void) {
   // GMT -1 = -3600
   // GMT 0 = 0
   timeClient.setTimeOffset(3600);
-
-  // call function for setup SendMail
-  // till now the mail is sent in the same procedure; this has to be changed later
-  // GZE ToDo
-  setupSendMail();
-
+#endif
 }
 
 /* *******************************************************************
@@ -299,9 +307,8 @@ void loop(void) {
   /* WebClient (not used yet)*/
 
   ss = millis() / 1000;
-  if (clientIntervall > 0 && (ss - clientPreviousSs) >= clientIntervall)
-  {
- //   sendPost();
+  if (clientIntervall > 0 && (ss - clientPreviousSs) >= clientIntervall) {
+    //   sendPost();
     clientPreviousSs = ss;
   }
   server.handleClient();
@@ -311,53 +318,141 @@ void loop(void) {
   ArduinoOTA.handle();       // OTA Upload via ArduinoIDE
 
   /*=================================================================*/
-  /* Read in relais status */
+  /* evaluate water level */
+  /*=================================================================*/
+  // Read in relais status
   val_AHH = digitalRead(GPin_AHH);
-  val_AH  = digitalRead(GPin_AH);
-  val_AL  = digitalRead(GPin_AL);
+  val_AH = digitalRead(GPin_AH);
+  val_AL = digitalRead(GPin_AL);
   val_ALL = digitalRead(GPin_ALL);
 
-  
-  /*=================================================================*/
-  /*  code for getting time from NTP       */
-  timeClient.update();
+  // set alarmSte
+  alarmStateOld = alarmState;
 
+  if ((val_AHH == 0) && (val_AH == 0)) {
+    alarmState = 5;
+  } else if (val_AH == 0) {
+    alarmState = 4;
+  } else if (val_AL == 1) {
+    alarmState = 3;
+  } else if ((val_AL == 0) && (val_ALL == 1)) {
+    alarmState = 2;
+  } else if ((val_ALL == 0)) {
+    alarmState = 1;
+  }
+
+  // send mail depending on alarmState
+  String subject;
+  String textMsg;
+
+   
+  if (alarmStateOld > 0) {           // alarmStateOld == 0 means, it is the first run / dont send mail at the first run
+    if (alarmStateOld < alarmState)
+    { // water level is increasing
+      if (alarmState == 4)
+      {
+        // send warning mail
+        Serial.println("warning mail should be sent");
+        subject = "Pegel Zehentner -- Warnung ";
+        textMsg = "Wasserstand Zehentner ist in den Warnbereich gestiegen\n";
+        textMsg += "Pegelstand über die Web-Seite beobachten";
+        executeSendMail = true;
+      }
+      else if (alarmState == 5)
+      {
+        // send alarm mail
+        Serial.println("alarm mail should be sent");
+        subject = "Pegel Zehentner -- Alarm ";
+        textMsg = "Wasserstand Zehentner ist jetzt im Alarmbareich\n";
+        textMsg += "es muss umgehend eine Pumpe in Betrieb genommen werden.\n";
+        textMsg += "Wasserstand über die Web-Seite weiter beobachten";
+        executeSendMail = true;
+      }
+    }
+    else if (alarmStateOld > alarmState)
+    { // water level is decreasing
+      if (alarmState == 4)
+      {
+        // info that level comes from alarm and goes to warning
+        Serial.println("level decreasing, now warning");
+        subject = "Pegel Zehentner -- Warnung ";
+        textMsg = "Wasserstand Zehentner ist wieder zurück in den Warnbereich gesunken\n";
+        textMsg += "Pegelstand über die Web-Seite beobachten";
+        executeSendMail = true;
+      }
+      else if (alarmState == 3)
+      {
+        // info that level is now ok
+        Serial.println("level decreased to OK");
+        subject = "Pegel Zehentner -- OK ";
+        textMsg = "Wasserstand Zehentner ist wieder im Normalbereich\n";
+        executeSendMail = true;
+      }
+    }
+    else if (alarmStateOld == alarmState)
+    {
+      // do nothing
+      executeSendMail = false;
+    }
+  }
+  // call function for setup and send prepared
+  if (executeSendMail) {
+    Serial.println("Send Mail");
+    setupSendMail_andGo(subject, textMsg);
+    executeSendMail = false;
+  }
+//}
+
+/*=================================================================*/
+/*  code for getting time from NTP       */
+#ifndef debug_crash
+  timeClient.update();
+#endif
+
+
+#ifndef debug_crash
   time_t epochTime = timeClient.getEpochTime();
 
   formattedTime = timeClient.getFormattedTime();
 
   //Get a time structure
-  struct tm *ptm = gmtime ((time_t *)&epochTime); 
+  struct tm* ptm = gmtime((time_t*)&epochTime);
 
   int monthDay = ptm->tm_mday;
-  int currentMonth = ptm->tm_mon+1;
-  int currentYear = ptm->tm_year+1900;
+  int currentMonth = ptm->tm_mon + 1;
+  int currentYear = ptm->tm_year + 1900;
 
   //Print complete date:
   currentDate = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay);
-  #ifdef DEBUG_TIME
-    Serial.print("Formatted Time: ");
-    Serial.println(formattedTime);  
 
-    Serial.print("Month day: ");
-    Serial.println(monthDay);
-    
-    Serial.print("Month: ");
-    Serial.println(currentMonth);
-    
-    Serial.print("Year: ");
-    Serial.println(currentYear);
+#endif
 
-    Serial.print("Epoch Time: ");
-    Serial.println(epochTime);
+#ifdef DEBUG_TIME
+  Serial.print("Formatted Time: ");
+  Serial.println(formattedTime);
 
-    Serial.print("Current date: ");
-    Serial.println(currentDate);
+  Serial.print("Month day: ");
+  Serial.println(monthDay);
 
-    Serial.println("");
+  Serial.print("Month: ");
+  Serial.println(currentMonth);
 
-    delay(1000);
+  Serial.print("Year: ");
+  Serial.println(currentYear);
 
-  #endif
-/* End getting time and date */
+  Serial.print("Epoch Time: ");
+  Serial.println(epochTime);
+
+  Serial.print("Current date: ");
+  Serial.println(currentDate);
+
+  Serial.println("");
+
+  delay(1000);
+
+#endif
+  /* End getting time and date */
+
+  // set a delay to avoid ESP is busy all the time
+  delay(1);
 }

@@ -32,11 +32,11 @@
 
 
 
-void setupSendMail()
+void setupSendMail_andGo(const String& subject, const String& textMsg)
 {
 
   /* ============================================================= */
-  /* Setup Mailing functions                                       */
+  /* Setup and run SendEmail                                       */
 
   /*  Set the network reconnection option */
   MailClient.networkReconnect(true);
@@ -47,7 +47,7 @@ void setupSendMail()
    *
    * Debug port can be changed via ESP_MAIL_DEFAULT_DEBUG_PORT in ESP_Mail_FS.h
    */
-  smtp.debug(1);
+  smtp.debug(0);
 
   /* Set the callback function to get the sending results */
   smtp.callback(smtpCallback);
@@ -98,12 +98,16 @@ void setupSendMail()
   message.sender.name =  AUTHOR_NAME; 
   message.sender.email = AUTHOR_EMAIL;
 
-  String subject = "Test sending a message - V3 ";
+// Debug output
+  Serial.print("subject 1: ");
+  Serial.println(subject);
+
+//  String subject = "Test sending a message - V3 ";
   message.subject = subject;
 
   message.addRecipient(F("Georg"), RECIPIENT_EMAIL);
 
-  String textMsg = "This is simple plain text message.\n";
+//  String textMsg = "This is simple plain text message.\n";
 
 
   message.text.content = textMsg;
@@ -141,11 +145,11 @@ void setupSendMail()
       Serial.println("Connected with no Auth.");
   }
 
-  /* Start sending Email and close the session */
+    /* Start sending Email and close the session */
   if (!MailClient.sendMail(&smtp, &message))
     MailClient.printf("Error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
 /* ================================================================================ 
-/* End setup for Email send */
+/* End setup and run SendEmail  */
 }
 
 /* Callback function to get the Email sending status */
@@ -182,9 +186,10 @@ void smtpCallback(SMTP_Status status)
       MailClient.printf("Recipient: %s\n", result.recipients.c_str());
       MailClient.printf("Subject: %s\n", result.subject.c_str());
     }
-    Serial.println("----------------\n");
 
     // You need to clear sending result as the memory usage will grow up.
     smtp.sendingResult.clear();
+    Serial.println("----**-*----------\n");
+
   }
 }

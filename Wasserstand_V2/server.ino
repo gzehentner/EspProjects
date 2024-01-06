@@ -163,15 +163,15 @@ void handlePage()
 
   message += F("<article>\n"
                "<h2>Auswertung Wasserstand</h2>\n");
-  if ((val_AHH == 0 ) && (val_AH == 0)) {
+  if (alarmState == 5) {
     message += F("<message_err> Achtung Hochwasser -- Pumpe einschalten <br>Wasserstand > ");message += Level_AHH;message += F("<br></message_err>");
-  } else if  (val_AH == 0) {
+  } else if  (alarmState == 4) {
     message += F("<message_warn> Wasserstand ist zwischen "); message += Level_AH;  message += F(" und ");  message += Level_AHH; message += F( "<br></message_warn>");
-  } else if (val_AL == 1) {
+  } else if  (alarmState == 3) {
     message += F("<message_ok> Wasserstand ist zwischen "); message += Level_AL;  message += F(" und ");  message += Level_AH;  message += F( "<br></message_ok>");
-  } else if ((val_AL == 0) && (val_ALL == 1)) {
+  } else if  (alarmState == 2) {
     message += F("<message_ok> Wasserstand ist zwischen "); message += Level_ALL; message += F(" und ");  message += Level_AL;  message += F( "<br></message_ok>");
-  } else if ((val_ALL == 0)) {
+  } else if  (alarmState == 1) {
     message += F("<message_ok>   Wasserstand < ");message += Level_ALL;message += F("<br></message_ok>");
   }
   message += F("</article>\n");
@@ -223,7 +223,7 @@ void handleCss()
   // after modification always check if JSON is still valid. Just call the JSON (json) in your webbrowser and check.
 void handleJson() {
 /* =======================================*/
-  Serial.println(F("D268 requested json"));
+//  Serial.println(F("D268 requested json"));
   String message = "";
   message = (F("{\"ss\":"));                     // Start of JSON and the first object "ss":
   message += millis() / 1000;
