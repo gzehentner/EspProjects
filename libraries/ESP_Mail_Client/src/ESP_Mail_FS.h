@@ -22,7 +22,8 @@
  * ⛔ Use following build flag to disable.
  * -D DISABLE_NTP_TIME
  */
-#define ENABLE_NTP_TIME
+// #define ENABLE_NTP_TIME
+// #define DISABLE_NTP_TIME
 
 /**📍 For enabling the error string from error reason
  * ⛔ Use following build flag to disable.
