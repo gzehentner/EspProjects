@@ -81,7 +81,8 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 
 #define VERSION "2.2"  // the version of this sketch
 
-#define debug_crash
+// #define debug_crash
+#define debug_disable_sendMail
 
 // enable debugging of NTP time management
 // #define DEBUG_TIME
@@ -398,7 +399,11 @@ void loop(void) {
   // call function for setup and send prepared
   if (executeSendMail) {
     Serial.println("Send Mail");
-    setupSendMail_andGo(subject, textMsg);
+
+    #ifndef debug_disable_sendMail
+      setupSendMail_andGo(subject, textMsg);
+    #endif
+
     executeSendMail = false;
   }
 //}

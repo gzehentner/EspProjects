@@ -35,7 +35,7 @@
 void setupSendMail_andGo(const String& subject, const String& textMsg)
 {
 
-  /* ============================================================= */
+/* ============================================================= */
   /* Setup and run SendEmail                                       */
 
   /*  Set the network reconnection option */
@@ -47,7 +47,7 @@ void setupSendMail_andGo(const String& subject, const String& textMsg)
    *
    * Debug port can be changed via ESP_MAIL_DEFAULT_DEBUG_PORT in ESP_Mail_FS.h
    */
-  smtp.debug(0);
+  smtp.debug(1);
 
   /* Set the callback function to get the sending results */
   smtp.callback(smtpCallback);
@@ -70,7 +70,6 @@ void setupSendMail_andGo(const String& subject, const String& textMsg)
    * Assign any text to this option may cause the connection rejection.
    */
   config.login.user_domain = F("127.0.0.1");
-// GZE Todo
 
   /** If non-secure port is prefered (not allow SSL and TLS connection), use
    *  config.secure.mode = esp_mail_secure_mode_nonsecure;
@@ -82,46 +81,149 @@ void setupSendMail_andGo(const String& subject, const String& textMsg)
    *  or Custom_ESP_Mail_FS.h
    */
   // config.secure.mode = esp_mail_secure_mode_nonsecure;
-  // GZE Todo
 
-
-  // Set the NTP config time (gmt-offset for Berlin)
+  /*
+  Set the NTP config time
+  For times east of the Prime Meridian use 0-12
+  For times west of the Prime Meridian add 12 to the offset.
+  Ex. American/Denver GMT would be -6. 6 + 12 = 18
+  See https://en.wikipedia.org/wiki/Time_zone for a list of the GMT/UTC timezone offsets
+  */
   config.time.ntp_server = F("pool.ntp.org,time.nist.gov");
-  config.time.gmt_offset = 1;
+  config.time.gmt_offset = 3;
   config.time.day_light_offset = 0;
 
-  
+  /* The full message sending logs can now save to file */
+  /* Since v3.0.4, the sent logs stored in smtp.sendingResult will store only the latest message logs */
+  // config.sentLogs.filename = "/path/to/log/file";
+  // config.sentLogs.storage_type = esp_mail_file_storage_type_flash;
+
+  /** In ESP32, timezone environment will not keep after wake up boot from sleep.
+   * The local time will equal to GMT time.
+   *
+   * To sync or set time with NTP server with the valid local time after wake up boot,
+   * set both gmt and day light offsets to 0 and assign the timezone environment string e.g.
+
+     config.time.ntp_server = F("pool.ntp.org,time.nist.gov");
+     config.time.gmt_offset = 0;
+     config.time.day_light_offset = 0;
+     config.time.timezone_env_string = "JST-9"; // for Tokyo
+
+   * The library will get (sync) the time from NTP server without GMT time offset adjustment
+   * and set the timezone environment variable later.
+   *
+   * This timezone environment string will be stored to flash or SD file named "/tze.txt"
+   * which set via config.time.timezone_file.
+   *
+   * See the timezone environment string list from
+   * https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+   *
+   */
+
   /* Declare the message class */
   SMTP_Message message;
 
   /* Set the message headers */
-  message.sender.name =  AUTHOR_NAME; 
+  message.sender.name =  AUTHOR_NAME;
   message.sender.email = AUTHOR_EMAIL;
 
-// Debug output
-  Serial.print("subject 1: ");
-  Serial.println(subject);
+  /** If author and sender are not identical
+  message.sender.name = F("Sender");
+  message.sender.email = "sender@mail.com";
+  message.author.name = F("ESP Mail");
+  message.author.email = AUTHOR_EMAIL; // should be the same email as config.login.email
+ */
 
-//  String subject = "Test sending a message - V3 ";
+  // In case of sending non-ASCII characters in message envelope,
+  // that non-ASCII words should be encoded with proper charsets and encodings
+  // in form of `encoded-words` per RFC2047
+  // https://datatracker.ietf.org/doc/html/rfc2047
+
+//  String subject = "Test sending a message (メッセージの送信をテストする)";
   message.subject = subject;
 
   message.addRecipient(F("Georg"), RECIPIENT_EMAIL);
 
-//  String textMsg = "This is simple plain text message.\n";
-
+//  String textMsg = "This is simple plain text message which contains Chinese and Japanese words.\n";
 
   message.text.content = textMsg;
+
+  /** The content transfer encoding e.g.
+   * enc_7bit or "7bit" (not encoded)
+   * enc_qp or "quoted-printable" (encoded)
+   * enc_base64 or "base64" (encoded)
+   * enc_binary or "binary" (not encoded)
+   * enc_8bit or "8bit" (not encoded)
+   * The default value is "7bit"
+   */
+
   message.text.transfer_encoding = "base64"; // recommend for non-ASCII words in message.
 
+  /** If the message to send is a large string, to reduce the memory used from internal copying  while sending,
+   * you can assign string to message.text.blob by cast your string to uint8_t array like this
+   *
+   * String myBigString = "..... ......";
+   * message.text.blob.data = (uint8_t *)myBigString.c_str();
+   * message.text.blob.size = myBigString.length();
+   *
+   * or assign string to message.text.nonCopyContent, like this
+   *
+   * message.text.nonCopyContent = myBigString.c_str();
+   *
+   * Only base64 encoding is supported for content transfer encoding in this case.
+   */
+
+  /** The Plain text message character set e.g.
+   * us-ascii
+   * utf-8
+   * utf-7
+   * The default value is utf-8
+   */
   message.text.charSet = F("utf-8"); // recommend for non-ASCII words in message.
 
-  /** The message priority */
+  // If this is a reply message
+  // message.in_reply_to = "<parent message id>";
+  // message.references = "<parent references> <parent message id>";
+
+  /** The message priority
+   * esp_mail_smtp_priority_high or 1
+   * esp_mail_smtp_priority_normal or 3
+   * esp_mail_smtp_priority_low or 5
+   * The default value is esp_mail_smtp_priority_low
+   */
   message.priority = esp_mail_smtp_priority::esp_mail_smtp_priority_low;
+
+  // message.response.reply_to = "someone@somemail.com";
+  // message.response.return_path = "someone@somemail.com";
+
+  /** The Delivery Status Notifications e.g.
+   * esp_mail_smtp_notify_never
+   * esp_mail_smtp_notify_success
+   * esp_mail_smtp_notify_failure
+   * esp_mail_smtp_notify_delay
+   * The default value is esp_mail_smtp_notify_never
+   */
+  // message.response.notify = esp_mail_smtp_notify_success | esp_mail_smtp_notify_failure | esp_mail_smtp_notify_delay;
 
   /* Set the custom message header */
   message.addHeader(F("Message-ID: <abcde.fghij@gmail.com>"));
 
+  // For Root CA certificate verification (ESP8266 and ESP32 only)
+  // config.certificate.cert_data = rootCACert;
+  // or
+  // config.certificate.cert_file = "/path/to/der/file";
+  // config.certificate.cert_file_storage_type = esp_mail_file_storage_type_flash; // esp_mail_file_storage_type_sd
+  // config.certificate.verify = true;
+
+  // The WiFiNINA firmware the Root CA certification can be added via the option in Firmware update tool in Arduino IDE
+
   /* Connect to server with the session config */
+
+  // Library will be trying to sync the time with NTP server if time is never sync or set.
+  // This is 10 seconds blocking process.
+  // If time reading was timed out, the error "NTP server time reading timed out" will show via debug and callback function.
+  // You can manually sync time by yourself with NTP library or calling configTime in ESP32 and ESP8266.
+  // Time can be set manually with provided timestamp to function smtp.setSystemTime.
 
   /* Set the TCP response read timeout in seconds */
   // smtp.setTCPTimeout(10);
@@ -132,6 +234,15 @@ void setupSendMail_andGo(const String& subject, const String& textMsg)
     MailClient.printf("Connection error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
     return;
   }
+
+  /** Or connect without log in and log in later
+
+     if (!smtp.connect(&config, false))
+       return;
+
+     if (!smtp.loginWithPassword(AUTHOR_EMAIL, AUTHOR_PASSWORD))
+       return;
+  */
 
   if (!smtp.isLoggedIn())
   {
@@ -145,11 +256,15 @@ void setupSendMail_andGo(const String& subject, const String& textMsg)
       Serial.println("Connected with no Auth.");
   }
 
-    /* Start sending Email and close the session */
+  /* Start sending Email and close the session */
   if (!MailClient.sendMail(&smtp, &message))
     MailClient.printf("Error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
-/* ================================================================================ 
-/* End setup and run SendEmail  */
+
+  // to clear sending result log
+  // smtp.sendingResult.clear();
+
+
+
 }
 
 /* Callback function to get the Email sending status */
@@ -186,10 +301,9 @@ void smtpCallback(SMTP_Status status)
       MailClient.printf("Recipient: %s\n", result.recipients.c_str());
       MailClient.printf("Subject: %s\n", result.subject.c_str());
     }
+    Serial.println("----------------\n");
 
     // You need to clear sending result as the memory usage will grow up.
     smtp.sendingResult.clear();
-    Serial.println("----**-*----------\n");
-
   }
 }
