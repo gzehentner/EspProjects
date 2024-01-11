@@ -400,7 +400,7 @@ void loop(void) {
   if (executeSendMail) {
     Serial.println("Send Mail");
 
-    #ifndef debug_disable_SendMail
+    #ifndef debug_disable_sendMail
       setupSendMail_andGo(subject, textMsg);
     #endif
 
