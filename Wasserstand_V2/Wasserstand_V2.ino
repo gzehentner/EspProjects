@@ -9,13 +9,22 @@ including following features:
 - Info auf WebSeite anzeigen
 - Beim Wechsel auf einen gefährlichen Zustand und zurück werden Info Mails (Text-Mail) gesendet
 
-known issues: 
+------------------------------
+V2.2
+----
+fixed issues: 
 - actual date/time is actually not evaluated to avoid crash when sending email --> this has to be fixed next (unset debug_crash to reactivate)
 
-new features comming soon:
-- Umstellung auf HTML Mail
-  - Farbe soll ins Spiel kommen
+new features implemented
+- HTML Mail
   - Hyperlink auf die Hauptseite
+
+new features comming soon:
+- HTML Mail mit Farbe
+- Testmail per klick
+
+known issues: OTA download not possible "not enouth space"
+-----------------------------------------------------------
 
 Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 
@@ -81,11 +90,14 @@ Code Basiert auf dem ServerClientTutorial (beschrieben gleich hier darunter)
 
 #define VERSION "2.2"  // the version of this sketch
 
-// #define debug_crash
 #define debug_disable_sendMail
 
 // enable debugging of NTP time management
 // #define DEBUG_TIME
+
+#define BLUE_LED 2
+
+
 
 /* *******************************************************************
          the board settings / die Einstellungen der verschiedenen Boards
@@ -115,8 +127,13 @@ const char* sendHttpTo = "http://192.168.178.153/d.php";  // the module will sen
 /* Declare the global used SMTPSession object for SMTP transport */
 SMTPSession smtp;
 
+Session_Config config;
+
 /* Callback function to get the Email sending status */
 void smtpCallback(SMTP_Status status);
+
+#include "HeapStat.h"
+HeapStat heapInfo;
 
 // const char rootCACert[] PROGMEM = "-----BEGIN CERTIFICATE-----\n"
 //                                   "-----END CERTIFICATE-----\n";
@@ -180,10 +197,8 @@ bool executeSendMail = false;
 /* Variables to connect to timeserver   */
 /* Define NTP Client to get time */
 
-#ifndef debug_crash
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
-#endif
 
 String currentDate;    // hold the current date
 String formattedTime;  // hold the current time
@@ -210,6 +225,9 @@ ESP8266WebServer server(80);  // an instance for the webserver
  ********************************************************************/
 
 void setup(void) {
+
+  // initialize digital pin LED_BUILTIN as an output.
+  pinMode(BLUE_LED, OUTPUT);
 
   /*=================================================================*/
   /* setup serial  and connect to WLAN */
@@ -238,6 +256,33 @@ void setup(void) {
     Serial.println(F("MDNS responder started"));
   }
 
+  /*=================================================================*/
+  /* Prepare SendMail */
+
+  MailClient.networkReconnect(true);
+  smtp.debug(1);
+
+  smtp.callback(smtpCallback);
+
+  config.server.host_name = SMTP_HOST;
+  config.server.port = SMTP_PORT;
+  config.login.email = AUTHOR_EMAIL;
+  config.login.password = AUTHOR_PASSWORD;
+
+  config.login.user_domain = F("127.0.0.1");
+
+  /*
+  Set the NTP config time
+  For times east of the Prime Meridian use 0-12
+  For times west of the Prime Meridian add 12 to the offset.
+  Ex. American/Denver GMT would be -6. 6 + 12 = 18
+  See https://en.wikipedia.org/wiki/Time_zone for a list of the GMT/UTC timezone offsets
+  */
+  config.time.ntp_server = F("pool.ntp.org,time.nist.gov");
+  config.time.gmt_offset = 1;
+  config.time.day_light_offset = 0;
+
+  /*=================================================================*/
   /* Prepare WaterLevel Application */
 
   // prepare relais input / output
@@ -257,24 +302,24 @@ void setup(void) {
   /*=================================================================*/
   /* Setup WebServer and start*/
 
-  //define the pages and other content for the webserver
-  server.on("/", handlePage);       // send root page
-  server.on("/0.htm", handlePage);  // a request can reuse another handler
-  // server.on("/1.htm", handlePage1);
-  // server.on("/2.htm", handlePage2);
-  // server.on("/x.htm", handleOtherPage);          // just another page to explain my usage of HTML pages ...
+ //define the pages and other content for the webserver
+ server.on("/", handlePage);       // send root page
+ server.on("/0.htm", handlePage);  // a request can reuse another handler
+ // server.on("/1.htm", handlePage1);
+ // server.on("/2.htm", handlePage2);
+ // server.on("/x.htm", handleOtherPage);          // just another page to explain my usage of HTML pages ...
 
-  server.on("/f.css", handleCss);  // a stylesheet
-  server.on("/j.js", handleJs);    // javscript based on fetch API to update the page
-  //server.on("/j.js",  handleAjax);             // a javascript to handle AJAX/JSON update of the page  https://werner.rothschopf.net/201809_arduino_esp8266_server_client_2_ajax.htm
-  server.on("/json", handleJson);     // send data in JSON format
-                                      //  server.on("/c.php", handleCommand);            // process commands
-                                      //  server.on("/favicon.ico", handle204);          // process commands
-  server.onNotFound(handleNotFound);  // show a typical HTTP Error 404 page
+ server.on("/f.css", handleCss);  // a stylesheet
+ server.on("/j.js", handleJs);    // javscript based on fetch API to update the page
+ //server.on("/j.js",  handleAjax);             // a javascript to handle AJAX/JSON update of the page  https://werner.rothschopf.net/201809_arduino_esp8266_server_client_2_ajax.htm
+ server.on("/json", handleJson);     // send data in JSON format
+                                     //  server.on("/c.php", handleCommand);            // process commands
+                                     //  server.on("/favicon.ico", handle204);          // process commands
+ server.onNotFound(handleNotFound);  // show a typical HTTP Error 404 page
 
-  //the next two handlers are necessary to receive and show data from another module
-  // server.on("/d.php", handleData);               // receives data from another module
-  // server.on("/r.htm", handlePageR);              // show data as received from the remote module
+ //the next two handlers are necessary to receive and show data from another module
+ // server.on("/d.php", handleData);               // receives data from another module
+ // server.on("/r.htm", handlePageR);              // show data as received from the remote module
 
   server.begin();  // start the webserver
   Serial.println(F("HTTP server started"));
@@ -287,7 +332,6 @@ void setup(void) {
   /*=================================================================*/
   /* Initialize a NTPClient to get time */
 
-#ifndef debug_crash
   timeClient.begin();
   // Set offset time in seconds to adjust for your timezone, for example:
   // GMT +1 = 3600
@@ -295,7 +339,6 @@ void setup(void) {
   // GMT -1 = -3600
   // GMT 0 = 0
   timeClient.setTimeOffset(3600);
-#endif
 }
 
 /* *******************************************************************
@@ -304,6 +347,7 @@ void setup(void) {
 
 void loop(void) {
 
+  
   /*=================================================================*/
   /* WebClient (not used yet)*/
 
@@ -323,8 +367,8 @@ void loop(void) {
   /*=================================================================*/
   // Read in relais status
   val_AHH = digitalRead(GPin_AHH);
-  val_AH = digitalRead(GPin_AH);
-  val_AL = digitalRead(GPin_AL);
+  val_AH  = digitalRead(GPin_AH);
+  val_AL  = digitalRead(GPin_AL);
   val_ALL = digitalRead(GPin_ALL);
 
   // set alarmSte
@@ -345,6 +389,7 @@ void loop(void) {
   // send mail depending on alarmState
   String subject;
   String textMsg;
+  String htmlMsg;
 
    
   if (alarmStateOld > 0) {           // alarmStateOld == 0 means, it is the first run / dont send mail at the first run
@@ -353,20 +398,20 @@ void loop(void) {
       if (alarmState == 4)
       {
         // send warning mail
-        Serial.println("warning mail should be sent");
-        subject = "Pegel Zehentner -- Warnung ";
-        textMsg = "Wasserstand Zehentner ist in den Warnbereich gestiegen\n";
-        textMsg += "Pegelstand über die Web-Seite beobachten";
+        Serial.println(F("warning mail should be sent"));
+        subject =  F("Pegel Zehentner -- Warnung ");
+        htmlMsg =  F("<p>Wasserstand Zehentner ist in den Warnbereich gestiegen <br>");
+        htmlMsg += F("Pegelstand über die Web-Seite: </p>; // <a href='http://zehentner.dynv6.net:400'>Wasserstand-Messung</a> beobachten </p>");
         executeSendMail = true;
       }
       else if (alarmState == 5)
       {
         // send alarm mail
         Serial.println("alarm mail should be sent");
-        subject = "Pegel Zehentner -- Alarm ";
-        textMsg = "Wasserstand Zehentner ist jetzt im Alarmbareich\n";
-        textMsg += "es muss umgehend eine Pumpe in Betrieb genommen werden.\n";
-        textMsg += "Wasserstand über die Web-Seite weiter beobachten";
+        subject =  F("Pegel Zehentner -- Alarm ");
+        htmlMsg =  F("<p>Wasserstand Zehentner ist jetzt im Alarmbareich<br>");
+        htmlMsg += F("es muss umgehend eine Pumpe in Betrieb genommen werden. <br>");
+        htmlMsg += F("Pegelstand über die Web-Seite: <a href='http://zehentner.dynv6.net:400'>Wasserstand-Messung</a> beobachten </p>");
         executeSendMail = true;
       }
     }
@@ -375,18 +420,18 @@ void loop(void) {
       if (alarmState == 4)
       {
         // info that level comes from alarm and goes to warning
-        Serial.println("level decreasing, now warning");
-        subject = "Pegel Zehentner -- Warnung ";
-        textMsg = "Wasserstand Zehentner ist wieder zurück in den Warnbereich gesunken\n";
-        textMsg += "Pegelstand über die Web-Seite beobachten";
+        Serial.println(F("level decreasing, now warning"));
+        subject =  F("Pegel Zehentner -- Warnung ");
+        htmlMsg =  F("<p>Wasserstand Zehentner ist wieder zurück in den Warnbereich gesunken<br>");
+        htmlMsg += F("Pegelstand über die Web-Seite: <a href='http://zehentner.dynv6.net:400'>Wasserstand-Messung</a> beobachten </p>");
         executeSendMail = true;
       }
       else if (alarmState == 3)
       {
         // info that level is now ok
-        Serial.println("level decreased to OK");
-        subject = "Pegel Zehentner -- OK ";
-        textMsg = "Wasserstand Zehentner ist wieder im Normalbereich\n";
+        Serial.println(F("level decreased to OK"));
+        subject = F("Pegel Zehentner -- OK ");
+        htmlMsg = F("<p>Wasserstand Zehentner ist wieder im Normalbereich</p>");
         executeSendMail = true;
       }
     }
@@ -396,68 +441,147 @@ void loop(void) {
       executeSendMail = false;
     }
   }
-  // call function for setup and send prepared
-  if (executeSendMail) {
-    Serial.println("Send Mail");
 
-    #ifndef debug_disable_sendMail
-      setupSendMail_andGo(subject, textMsg);
-    #endif
+  /*=================================================================*/
+  /*  code for getting time from NTP       */
+    timeClient.update();
+  
+  
+    time_t epochTime = timeClient.getEpochTime();
+  
+    formattedTime = timeClient.getFormattedTime();
+  
+    //Get a time structure
+    struct tm* ptm = gmtime((time_t*)&epochTime);
+  
+    int monthDay = ptm->tm_mday;
+    int currentMonth = ptm->tm_mon + 1;
+    int currentYear = ptm->tm_year + 1900;
+  
+    //Print complete date:
+    currentDate = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay);
+  
 
-    executeSendMail = false;
-  }
-//}
-
-/*=================================================================*/
-/*  code for getting time from NTP       */
-#ifndef debug_crash
-  timeClient.update();
-#endif
-
-
-#ifndef debug_crash
-  time_t epochTime = timeClient.getEpochTime();
-
-  formattedTime = timeClient.getFormattedTime();
-
-  //Get a time structure
-  struct tm* ptm = gmtime((time_t*)&epochTime);
-
-  int monthDay = ptm->tm_mday;
-  int currentMonth = ptm->tm_mon + 1;
-  int currentYear = ptm->tm_year + 1900;
-
-  //Print complete date:
-  currentDate = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay);
-
-#endif
-
-#ifdef DEBUG_TIME
-  Serial.print("Formatted Time: ");
-  Serial.println(formattedTime);
-
-  Serial.print("Month day: ");
-  Serial.println(monthDay);
-
-  Serial.print("Month: ");
-  Serial.println(currentMonth);
-
-  Serial.print("Year: ");
-  Serial.println(currentYear);
-
-  Serial.print("Epoch Time: ");
-  Serial.println(epochTime);
-
-  Serial.print("Current date: ");
-  Serial.println(currentDate);
-
-  Serial.println("");
-
-  delay(1000);
-
-#endif
+  #ifdef DEBUG_TIME
+    Serial.print("Formatted Time: ");
+    Serial.println(formattedTime);
+  
+    Serial.print("Month day: ");
+    Serial.println(monthDay);
+  
+    Serial.print("Month: ");
+    Serial.println(currentMonth);
+  
+    Serial.print("Year: ");
+    Serial.println(currentYear);
+  
+    Serial.print("Epoch Time: ");
+    Serial.println(epochTime);
+  
+    Serial.print("Current date: ");
+    Serial.println(currentDate);
+  
+    Serial.println("");
+  
+    delay(1000);
+  
+  #endif
   /* End getting time and date */
 
   // set a delay to avoid ESP is busy all the time
   delay(1);
+
+  /*=================================================================*/
+  /* Send Email reusing session   */
+  /*=================================================================*/
+
+    if (executeSendMail)
+    {
+        executeSendMail = false;
+
+        SMTP_Message message;
+
+        message.sender.name = F("Pegel Zehentner");
+        message.sender.email = AUTHOR_EMAIL;
+        message.subject = subject;
+
+        message.addRecipient(F("Schorsch"), RECIPIENT_EMAIL);
+
+        // htmlMsg already set by Waterlevel
+        message.html.content = htmlMsg;
+        message.text.content = F("");
+
+
+        Serial.println();
+        Serial.println(F("Sending Email..."));
+
+        if (!smtp.isLoggedIn())
+        {
+            /* Set the TCP response read timeout in seconds */
+            // smtp.setTCPTimeout(10);
+
+            if (!smtp.connect(&config))
+            {
+                MailClient.printf("Connection error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+                goto exit;
+            }
+
+            if (!smtp.isLoggedIn())
+            {
+                Serial.println(F("Error, Not yet logged in."));
+                goto exit;
+            }
+            else
+            {
+                if (smtp.isAuthenticated())
+                    Serial.println(F("Successfully logged in."));
+                else
+                    Serial.println(F("Connected with no Auth."));
+            }
+        }
+
+        if (!MailClient.sendMail(&smtp, &message, false))
+            MailClient.printf("Error, Status Code: %d, Error Code: %d, Reason: %s\n", smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+
+
+    exit:
+
+        heapInfo.collect();
+        heapInfo.print();
+
+
+  /*=END Send_Reuse_Session =====================================*/
+
+    }
+
+}
+
+/* Callback function to get the Email sending status */
+void smtpCallback(SMTP_Status status)
+{
+
+    Serial.println(status.info());
+
+    if (status.success())
+    {
+
+        Serial.println   (F("----------------"));
+        MailClient.printf(  "Message sent success: %d\n", status.completedCount());
+        MailClient.printf(  "Message sent failed: %d\n", status.failedCount());
+        Serial.println   (F("----------------\n"));
+
+        for (size_t i = 0; i < smtp.sendingResult.size(); i++)
+        {
+            SMTP_Result result = smtp.sendingResult.getItem(i);
+
+            MailClient.printf("Message No: %d\n", i + 1);
+            MailClient.printf("Status: %s\n", result.completed ? "success" : "failed");
+            MailClient.printf("Date/Time: %s\n", MailClient.Time.getDateTimeString(result.timestamp, "%B %d, %Y %H:%M:%S").c_str());
+            MailClient.printf("Recipient: %s\n", result.recipients.c_str());
+            MailClient.printf("Subject: %s\n", result.subject.c_str());
+        }
+        Serial.println("----------------\n");
+
+        smtp.sendingResult.clear();
+    }
 }
