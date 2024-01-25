@@ -59,6 +59,7 @@ void handle204()
 /* =======================================*/
 {  
   server.send(204);                // this page doesn't send back content
+  server.send(255);
 }
 
 
